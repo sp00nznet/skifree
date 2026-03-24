@@ -20,6 +20,12 @@ enhanced=0
 wind_x=0
 wind_y=0
 
+[fun]
+# Yeti Horde: spawn dozens of yetis chasing the player from all directions
+yeti_horde=0
+# Tree Horde: walking trees chase the player at yeti speed
+tree_horde=0
+
 [mods]
 # Path to mod directory (empty = embedded resources only)
 # resource_dir=mods/mymod

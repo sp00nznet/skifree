@@ -113,6 +113,7 @@ int net_host(int port) {
     players[0].connected = 1;
     players[0].player_id = 0;
     players[0].ready = 1; /* host is always ready */
+    /* Color and name will be set by the caller via net_set_player_info */
     players[0].r = 255; players[0].g = 255; players[0].b = 255;
     strncpy(players[0].name, "Host", sizeof(players[0].name));
 

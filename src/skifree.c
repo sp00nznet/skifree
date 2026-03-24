@@ -39,6 +39,10 @@ static int debugOverlayEnabled = 0;
 /* Asset viewer (Debug > Asset Viewer) — shows sprite grid */
 static int assetViewerEnabled = 0;
 
+/* Horde mode runtime flags */
+static int yetiHordeActive = 0;
+static int treeHordeActive = 0;
+
 /* FPS tracking for debug overlay */
 static Uint32 fpsLastTime = 0;
 static int fpsFrameCount = 0;
@@ -155,6 +159,7 @@ int main(int argc, char* argv[]) {
 
     int is_running = 1;
     int last_timer = SDL_GetTicks();
+    int was_in_lobby = 0;
     while (is_running) {
         while (SDL_PollEvent(&event)) {
             menu_gui_process_event(&event);
@@ -277,6 +282,16 @@ int main(int argc, char* argv[]) {
             case MENU_DEBUG_ASSETS:
                 assetViewerEnabled = !assetViewerEnabled;
                 break;
+            case MENU_MODS_YETI_HORDE:
+                yetiHordeActive = !yetiHordeActive;
+                menu_set_mod_check(IDM_MODS_YETI_HORDE, yetiHordeActive);
+                handleGameReset(); /* restart with mode enabled/disabled */
+                break;
+            case MENU_MODS_TREE_HORDE:
+                treeHordeActive = !treeHordeActive;
+                menu_set_mod_check(IDM_MODS_TREE_HORDE, treeHordeActive);
+                handleGameReset();
+                break;
             case MENU_ABOUT:
                 dialog_about(hSkiMainWnd);
                 break;
@@ -290,14 +305,28 @@ int main(int argc, char* argv[]) {
             last_timer = SDL_GetTicks();
 
             /* Network: send and receive player state */
-            if (net_is_active() && playerActor) {
-                net_send_player_state(
-                    playerActor->xPosMaybe, playerActor->yPosMaybe,
-                    playerActor->spriteIdx2, playerActor->isInAir,
-                    playerActor->HorizontalVelMaybe,
-                    playerActor->verticalVelocityMaybe);
+            if (net_is_active()) {
                 net_update();
-                net_update_actors();
+
+                /* Detect lobby -> game transition (host clicked Start or client received START) */
+                if (was_in_lobby && !net_get_lobby_state()) {
+                    printf("[net] Game starting — resetting!\n");
+                    handleGameReset();
+                    /* TODO: apply spawn offsets per player index */
+                    was_in_lobby = 0;
+                }
+                if (net_get_lobby_state()) {
+                    was_in_lobby = 1;
+                }
+
+                if (playerActor && !net_get_lobby_state()) {
+                    net_send_player_state(
+                        playerActor->xPosMaybe, playerActor->yPosMaybe,
+                        playerActor->spriteIdx2, playerActor->isInAir,
+                        playerActor->HorizontalVelMaybe,
+                        playerActor->verticalVelocityMaybe);
+                    net_update_actors();
+                }
             }
         }
         SDL_Delay(1);
@@ -313,10 +342,15 @@ int main(int argc, char* argv[]) {
         }
         if (menu_gui_host_requested()) {
             net_host(menu_gui_get_host_port());
+            /* Apply player identity to host slot */
+            net_set_player_info(menu_gui_get_player_name(),
+                menu_gui_get_player_r(), menu_gui_get_player_g(), menu_gui_get_player_b());
             menu_gui_clear_host_request();
         }
         if (menu_gui_join_requested()) {
             net_connect(menu_gui_get_join_ip(), menu_gui_get_join_port());
+            net_set_player_info(menu_gui_get_player_name(),
+                menu_gui_get_player_r(), menu_gui_get_player_g(), menu_gui_get_player_b());
             menu_gui_clear_join_request();
         }
 
@@ -734,6 +768,12 @@ int initWindows() {
     /* Initialize input bindings */
     input_bind_init();
     input_bind_load();
+
+    /* Initialize horde modes from config */
+    yetiHordeActive = config_get_int("fun", "yeti_horde", 0);
+    treeHordeActive = config_get_int("fun", "tree_horde", 0);
+    menu_set_mod_check(IDM_MODS_YETI_HORDE, yetiHordeActive);
+    menu_set_mod_check(IDM_MODS_TREE_HORDE, treeHordeActive);
 
     return 1;
 }
@@ -2540,6 +2580,24 @@ Actor* updateActorTypeA_walkingTree(Actor* actor) {
     ski_assert(ActorframeNo >= 0x3c, 2218);
     ski_assert(ActorframeNo < 0x40, 2219);
 
+    /* Tree Horde mode: trees chase the player like yetis */
+    if ((treeHordeActive || config_get_int("fun", "tree_horde", 0)) && playerActor) {
+        short dx = playerActor->xPosMaybe - actor->xPosMaybe;
+        short dy = playerActor->yPosMaybe - actor->yPosMaybe;
+
+        /* Chase at moderate speed (slower than yeti but persistent) */
+        if (dx > 8) actor->HorizontalVelMaybe = 3;
+        else if (dx < -8) actor->HorizontalVelMaybe = -3;
+        else actor->HorizontalVelMaybe = 0;
+
+        actor->verticalVelocityMaybe = (dy > 0) ? 4 : -2;
+
+        pAVar3 = updateActorPositionWithVelocityMaybe(actor);
+        ActorframeNo = (actor->HorizontalVelMaybe >= 0) ? 0x3f : 0x3e;
+        if (actor->HorizontalVelMaybe == 0) ActorframeNo = 0x3d;
+        return setActorFrameNo(pAVar3, ActorframeNo);
+    }
+
     switch (ActorframeNo) {
     case 0x3c:
         if (actor->HorizontalVelMaybe != 0) {
@@ -3676,6 +3734,57 @@ void setupPermObjects() {
     permObject.actorTypeMaybe = ACTOR_TYPE_6_YETI_BOTTOM;
     permObject.maybeY = 32060;
     addPermObject(&PermObjectList_0040c720, &permObject);
+
+    /* Yeti Horde mode: spawn dozens of yetis in a ring around the play area */
+    if (yetiHordeActive || config_get_int("fun", "yeti_horde", 0)) {
+        int yi;
+        short horde_types[] = { ACTOR_TYPE_5_YETI_TOP, ACTOR_TYPE_6_YETI_BOTTOM,
+                                ACTOR_TYPE_7_YETI_LEFT, ACTOR_TYPE_8_YETI_RIGHT };
+        printf("[fun] YETI HORDE MODE ACTIVATED!\n");
+        for (yi = 0; yi < 24 && permObjectCount < NUM_PERM_OBJECTS - 4; yi++) {
+            int type_idx = yi % 4;
+            permObject.actorTypeMaybe = horde_types[type_idx];
+            permObject.actorFrameNo = 0x2a;
+            permObject.spriteIdx = 0;
+            permObject.unk_0x18 = 0;
+            permObject.unk_0x1e = 0;
+            permObject.yVelocity = 0;
+            permObject.xVelocity = 0;
+            switch (type_idx) {
+            case 0: /* top */
+                permObject.maybeX = (short)(-8000 + yi * 700);
+                permObject.maybeY = (short)(-2060 - yi * 200);
+                break;
+            case 1: /* bottom */
+                permObject.maybeX = (short)(-8000 + yi * 700);
+                permObject.maybeY = (short)(32060 + yi * 200);
+                break;
+            case 2: /* left */
+                permObject.maybeX = (short)(-16060 - yi * 200);
+                permObject.maybeY = (short)(-5000 + yi * 1500);
+                break;
+            case 3: /* right */
+                permObject.maybeX = (short)(16060 + yi * 200);
+                permObject.maybeY = (short)(-5000 + yi * 1500);
+                break;
+            }
+            addPermObject(&PermObjectList_0040c720, &permObject);
+        }
+    }
+
+    /* Tree Horde mode: spawn walking trees that chase the player */
+    if (treeHordeActive || config_get_int("fun", "tree_horde", 0)) {
+        int ti;
+        printf("[fun] TREE HORDE MODE ACTIVATED!\n");
+        for (ti = 0; ti < 20; ti++) {
+            Actor *tree = addActorOfType(ACTOR_TYPE_10_WALKING_TREE, 0x3c);
+            if (tree) {
+                short tx = (short)(ski_random(2000) - 1000);
+                short ty = (short)(500 + ski_random(8000));
+                updateActorPositionMaybe(tree, tx, ty, 0);
+            }
+        }
+    }
 }
 
 // TODO not byte accurate

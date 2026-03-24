@@ -20,6 +20,9 @@
 #define IDM_MP_HOST         5001
 #define IDM_MP_JOIN         5002
 
+#define IDM_MODS_YETI_HORDE 5501
+#define IDM_MODS_TREE_HORDE 5502
+
 #define IDM_DEBUG_OVERLAY   6001
 #define IDM_DEBUG_ASSETS    6002
 
@@ -32,11 +35,13 @@ typedef enum {
     MENU_SOUND_VOLUME,
     MENU_CTRL_KEYBOARD, MENU_CTRL_GAMEPAD,
     MENU_MP_SETTINGS, MENU_MP_HOST, MENU_MP_JOIN,
+    MENU_MODS_YETI_HORDE, MENU_MODS_TREE_HORDE,
     MENU_DEBUG_OVERLAY, MENU_DEBUG_ASSETS,
     MENU_ABOUT
 } menu_action_t;
 
 bool menu_init(void *sdl_window);
 menu_action_t menu_poll_action(void);
+void menu_set_mod_check(int mod_id, int enabled);
 
 #endif

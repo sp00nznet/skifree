@@ -14,6 +14,7 @@
 static HMENU h_menu = NULL;
 static HMENU h_gfx_menu = NULL;
 static HMENU h_sound_menu = NULL;
+static HMENU h_mods_menu = NULL;
 static WNDPROC original_wndproc = NULL;
 static menu_action_t pending_action = MENU_NONE;
 
@@ -31,6 +32,8 @@ static LRESULT CALLBACK menu_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case IDM_MP_SETTINGS:   pending_action = MENU_MP_SETTINGS;   break;
         case IDM_MP_HOST:       pending_action = MENU_MP_HOST;      break;
         case IDM_MP_JOIN:       pending_action = MENU_MP_JOIN;      break;
+        case IDM_MODS_YETI_HORDE: pending_action = MENU_MODS_YETI_HORDE; break;
+        case IDM_MODS_TREE_HORDE: pending_action = MENU_MODS_TREE_HORDE; break;
         case IDM_DEBUG_OVERLAY: pending_action = MENU_DEBUG_OVERLAY; break;
         case IDM_DEBUG_ASSETS:  pending_action = MENU_DEBUG_ASSETS;  break;
         case IDM_ABOUT:         pending_action = MENU_ABOUT;        break;
@@ -89,6 +92,15 @@ bool menu_init(void *sdl_window) {
     AppendMenuW(mp_menu, MF_STRING, IDM_MP_JOIN, L"&Join...");
     AppendMenuW(h_menu, MF_POPUP, (UINT_PTR)mp_menu, L"&Multiplayer");
 
+    /* Mods */
+    {
+        HMENU mods_menu = CreatePopupMenu();
+        AppendMenuW(mods_menu, MF_STRING | MF_UNCHECKED, IDM_MODS_YETI_HORDE, L"&Yeti Horde");
+        AppendMenuW(mods_menu, MF_STRING | MF_UNCHECKED, IDM_MODS_TREE_HORDE, L"&Tree Horde");
+        h_mods_menu = mods_menu;
+        AppendMenuW(h_menu, MF_POPUP, (UINT_PTR)mods_menu, L"&Mods");
+    }
+
     /* Debug */
     debug_menu = CreatePopupMenu();
     AppendMenuW(debug_menu, MF_STRING, IDM_DEBUG_OVERLAY, L"&Overlay\tF9");
@@ -113,8 +125,15 @@ menu_action_t menu_poll_action(void) {
     return action;
 }
 
+void menu_set_mod_check(int mod_id, int enabled) {
+    if (!h_mods_menu) return;
+    CheckMenuItem(h_mods_menu, mod_id,
+                  MF_BYCOMMAND | (enabled ? MF_CHECKED : MF_UNCHECKED));
+}
+
 #else
 /* Stubs for non-Windows platforms */
 bool menu_init(void *sdl_window) { (void)sdl_window; return false; }
 menu_action_t menu_poll_action(void) { return MENU_NONE; }
+void menu_set_mod_check(int mod_id, int enabled) { (void)mod_id; (void)enabled; }
 #endif
