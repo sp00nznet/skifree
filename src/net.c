@@ -49,6 +49,7 @@ static int is_hosting = 0;
 static int is_connected = 0;
 static int local_player_id = 0;
 static int tick_counter = 0;
+static int lobby_active = 0;
 
 static socket_t udp_socket = SOCKET_INVALID;
 static struct sockaddr_in peer_addrs[NET_MAX_PLAYERS];
@@ -107,12 +108,15 @@ int net_host(int port) {
     is_hosting = 1;
     is_connected = 1;
     local_player_id = 0;
+    lobby_active = 1;
 
     players[0].connected = 1;
     players[0].player_id = 0;
+    players[0].ready = 1; /* host is always ready */
+    players[0].r = 255; players[0].g = 255; players[0].b = 255;
     strncpy(players[0].name, "Host", sizeof(players[0].name));
 
-    printf("[net] Hosting on port %d\n", port);
+    printf("[net] Hosting on port %d (lobby)\n", port);
     return 1;
 }
 
@@ -150,9 +154,12 @@ int net_connect(const char *host, int port) {
     is_hosting = 0;
     is_connected = 1;
     local_player_id = 1;
+    lobby_active = 1;
 
     players[1].connected = 1;
     players[1].player_id = 1;
+    players[1].ready = 0;
+    players[1].r = 255; players[1].g = 255; players[1].b = 255;
     strncpy(players[1].name, "Player", sizeof(players[1].name));
 
     printf("[net] Connected to %s:%d\n", host, port);
@@ -175,6 +182,7 @@ void net_disconnect(void) {
     is_connected = 0;
     is_hosting = 0;
     num_peers = 0;
+    lobby_active = 0;
     printf("[net] Disconnected\n");
 }
 
@@ -271,6 +279,44 @@ void net_update(void) {
             }
             break;
         }
+        case NET_PKT_PLAYER_INFO: {
+            NetPlayerInfo *info = (NetPlayerInfo *)buf;
+            int pid = info->player_id;
+            if (pid >= 0 && pid < NET_MAX_PLAYERS) {
+                strncpy(players[pid].name, info->name, sizeof(players[pid].name));
+                players[pid].r = info->r;
+                players[pid].g = info->g;
+                players[pid].b = info->b;
+                printf("[net] Player %d info: %s (color %d,%d,%d)\n",
+                       pid, info->name, info->r, info->g, info->b);
+            }
+            break;
+        }
+        case NET_PKT_READY: {
+            NetReady *rdy = (NetReady *)buf;
+            int pid = rdy->player_id;
+            if (pid >= 0 && pid < NET_MAX_PLAYERS) {
+                players[pid].ready = rdy->ready;
+                printf("[net] Player %d ready=%d\n", pid, rdy->ready);
+            }
+            break;
+        }
+        case NET_PKT_GAME_START: {
+            /* Client receives game start — reset and begin */
+            lobby_active = 0;
+            printf("[net] Game starting!\n");
+            /* The actual game reset is handled by the caller polling net_get_lobby_state */
+            break;
+        }
+        case NET_PKT_KICK: {
+            NetKick *kick = (NetKick *)buf;
+            if (kick->player_id == local_player_id) {
+                printf("[net] Kicked from server\n");
+                net_disconnect();
+                return;
+            }
+            break;
+        }
         }
     }
 }
@@ -314,4 +360,123 @@ int net_is_host(void) { return is_hosting; }
 NetPlayer *net_get_players(int *count) {
     if (count) *count = NET_MAX_PLAYERS;
     return players;
+}
+
+void net_set_player_info(const char *name, uint8_t r, uint8_t g, uint8_t b) {
+    NetPlayerInfo pkt;
+    int i;
+
+    strncpy(players[local_player_id].name, name, sizeof(players[local_player_id].name));
+    players[local_player_id].r = r;
+    players[local_player_id].g = g;
+    players[local_player_id].b = b;
+
+    if (!is_connected || udp_socket == SOCKET_INVALID) return;
+
+    pkt.type = NET_PKT_PLAYER_INFO;
+    pkt.player_id = (uint8_t)local_player_id;
+    strncpy(pkt.name, name, sizeof(pkt.name));
+    pkt.r = r;
+    pkt.g = g;
+    pkt.b = b;
+
+    for (i = 0; i < num_peers; i++) {
+        sendto(udp_socket, (char *)&pkt, sizeof(pkt), 0,
+               (struct sockaddr *)&peer_addrs[i], sizeof(peer_addrs[i]));
+    }
+}
+
+void net_set_ready(int ready) {
+    NetReady pkt;
+    int i;
+
+    players[local_player_id].ready = (uint8_t)ready;
+
+    if (!is_connected || udp_socket == SOCKET_INVALID) return;
+
+    pkt.type = NET_PKT_READY;
+    pkt.player_id = (uint8_t)local_player_id;
+    pkt.ready = (uint8_t)ready;
+
+    for (i = 0; i < num_peers; i++) {
+        sendto(udp_socket, (char *)&pkt, sizeof(pkt), 0,
+               (struct sockaddr *)&peer_addrs[i], sizeof(peer_addrs[i]));
+    }
+}
+
+void net_start_game(int bot_count) {
+    NetGameStart pkt;
+    int i, total;
+
+    if (!is_hosting) return;
+
+    /* Count connected players */
+    total = 0;
+    for (i = 0; i < NET_MAX_PLAYERS; i++) {
+        if (players[i].connected) total++;
+    }
+
+    pkt.type = NET_PKT_GAME_START;
+    memset(pkt.spawn_offsets, 0, sizeof(pkt.spawn_offsets));
+
+    /* Assign spawn offsets: centered around 0 */
+    {
+        int idx = 0;
+        int total_spawns = total + bot_count;
+        for (i = 0; i < NET_MAX_PLAYERS; i++) {
+            if (players[i].connected) {
+                pkt.spawn_offsets[i] = (int8_t)((idx - total_spawns / 2) * 60);
+                idx++;
+            }
+        }
+    }
+
+    /* Send to all peers */
+    for (i = 0; i < num_peers; i++) {
+        sendto(udp_socket, (char *)&pkt, sizeof(pkt), 0,
+               (struct sockaddr *)&peer_addrs[i], sizeof(peer_addrs[i]));
+    }
+
+    lobby_active = 0;
+    printf("[net] Game started (bots: %d)\n", bot_count);
+}
+
+void net_kick_player(int player_id) {
+    NetKick pkt;
+
+    if (!is_hosting) return;
+    if (player_id <= 0 || player_id >= NET_MAX_PLAYERS) return;
+
+    pkt.type = NET_PKT_KICK;
+    pkt.player_id = (uint8_t)player_id;
+
+    /* Send kick to the target player */
+    if (player_id - 1 < num_peers) {
+        sendto(udp_socket, (char *)&pkt, sizeof(pkt), 0,
+               (struct sockaddr *)&peer_addrs[player_id - 1],
+               sizeof(peer_addrs[player_id - 1]));
+    }
+
+    /* Clean up locally */
+    if (players[player_id].actor) {
+        actorSetFlag8IfFlag1IsUnset(players[player_id].actor);
+        players[player_id].actor = NULL;
+    }
+    players[player_id].connected = 0;
+    printf("[net] Kicked player %d\n", player_id);
+}
+
+int net_get_lobby_state(void) {
+    return lobby_active;
+}
+
+int net_all_humans_ready(void) {
+    int i;
+    int any_connected = 0;
+    for (i = 0; i < NET_MAX_PLAYERS; i++) {
+        if (!players[i].connected) continue;
+        any_connected = 1;
+        if (!players[i].ready) return 0;
+    }
+    return any_connected;
 }

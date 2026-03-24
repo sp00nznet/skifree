@@ -33,8 +33,16 @@
 /* Gamepad state */
 static SDL_GameController *gameController = NULL;
 
-/* Debug overlay (F9) */
+/* Debug overlay (F9) — shows text info */
 static int debugOverlayEnabled = 0;
+
+/* Asset viewer (Debug > Asset Viewer) — shows sprite grid */
+static int assetViewerEnabled = 0;
+
+/* FPS tracking for debug overlay */
+static Uint32 fpsLastTime = 0;
+static int fpsFrameCount = 0;
+static int fpsDisplay = 0;
 
 // int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 int main(int argc, char* argv[]) {
@@ -183,19 +191,16 @@ int main(int argc, char* argv[]) {
                 break;
             case SDL_CONTROLLERBUTTONDOWN:
                 if (inputEnabled && gameController) {
-                    switch (event.cbutton.button) {
-                    case SDL_CONTROLLER_BUTTON_A:
+                    InputBindings *pbind = input_bind_get();
+                    int btn = event.cbutton.button;
+                    if (btn == pbind->pad_jump) {
                         handleMouseClick();
-                        break;
-                    case SDL_CONTROLLER_BUTTON_START:
+                    } else if (btn == pbind->pad_pause) {
                         togglePausedState();
-                        break;
-                    case SDL_CONTROLLER_BUTTON_BACK:
+                    } else if (btn == pbind->pad_reset) {
                         handleGameReset();
-                        break;
-                    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                    } else if (btn == pbind->pad_turbo) {
                         isTurboMode = (isTurboMode == 0);
-                        break;
                     }
                 }
                 break;
@@ -222,19 +227,23 @@ int main(int argc, char* argv[]) {
             menu_action_t action = menu_poll_action();
             switch (action) {
             case MENU_FILE_SAVE:
-                save_game_state("skifree_save.json");
+                if (!net_is_active()) save_game_state("skifree_save.json");
                 break;
             case MENU_FILE_SAVE_AS: {
-                char path[512];
-                if (dialog_save_file(path, sizeof(path))) {
-                    save_game_state(path);
+                if (!net_is_active()) {
+                    char path[512];
+                    if (dialog_save_file(path, sizeof(path))) {
+                        save_game_state(path);
+                    }
                 }
                 break;
             }
             case MENU_FILE_LOAD: {
-                char path[512];
-                if (dialog_open_file(path, sizeof(path))) {
-                    load_game_state(path);
+                if (!net_is_active()) {
+                    char path[512];
+                    if (dialog_open_file(path, sizeof(path))) {
+                        load_game_state(path);
+                    }
                 }
                 break;
             }
@@ -246,6 +255,9 @@ int main(int argc, char* argv[]) {
                 break;
             case MENU_SOUND_VOLUME:
                 menu_gui_show_sound_settings();
+                break;
+            case MENU_MP_SETTINGS:
+                menu_gui_show_mp_settings();
                 break;
             case MENU_MP_HOST:
                 menu_gui_show_host_dialog();
@@ -261,6 +273,9 @@ int main(int argc, char* argv[]) {
                 break;
             case MENU_DEBUG_OVERLAY:
                 debugOverlayEnabled = !debugOverlayEnabled;
+                break;
+            case MENU_DEBUG_ASSETS:
+                assetViewerEnabled = !assetViewerEnabled;
                 break;
             case MENU_ABOUT:
                 dialog_about(hSkiMainWnd);
@@ -1050,8 +1065,100 @@ void mainWindowPaint(HWND param_1) {
     dstrect.h = statusWindowHeight;
     SDL_RenderCopy(renderer, statusWindowTexture, NULL, &dstrect);
 
-    /* Debug overlay (F9) — show sprite atlas and game state */
+    /* Debug text overlay (F9) — show game state info */
     if (debugOverlayEnabled) {
+        SDL_Rect overlay;
+        int dy = 10;
+
+        /* FPS calculation */
+        fpsFrameCount++;
+        {
+            Uint32 now = SDL_GetTicks();
+            if (now - fpsLastTime >= 1000) {
+                fpsDisplay = fpsFrameCount;
+                fpsFrameCount = 0;
+                fpsLastTime = now;
+            }
+        }
+
+        /* Semi-transparent background box in top-left corner */
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        overlay.x = 4; overlay.y = 4;
+        overlay.w = 240; overlay.h = 120;
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180);
+        SDL_RenderFillRect(renderer, &overlay);
+
+        /* Draw debug text lines using small rectangles as simple text */
+        /* We render each line as a colored bar with positional info encoded */
+        {
+            /* Line: FPS */
+            SDL_Rect line;
+            int px = playerActor ? playerActor->xPosMaybe : 0;
+            int py = playerActor ? playerActor->yPosMaybe : 0;
+            int actorCountVal = 0;
+            Actor *a = actorListPtr;
+            while (a) { actorCountVal++; a = a->next; }
+
+            /* Use SDL_snprintf to format, then render as colored bars proportional to values */
+            /* FPS bar */
+            line.x = 8; line.y = dy + 4; line.w = fpsDisplay * 2; line.h = 8;
+            SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+            SDL_RenderFillRect(renderer, &line);
+            /* Label: small white marker at x=8 */
+            line.x = 8; line.y = dy + 14; line.w = 2; line.h = 2;
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderFillRect(renderer, &line);
+
+            /* Player X bar */
+            dy += 20;
+            line.x = 8; line.y = dy + 4;
+            line.w = (px / 20) % 220; if (line.w < 0) line.w = -line.w;
+            line.h = 8;
+            SDL_SetRenderDrawColor(renderer, 100, 150, 255, 255);
+            SDL_RenderFillRect(renderer, &line);
+
+            /* Player Y bar */
+            dy += 14;
+            line.x = 8; line.y = dy + 4;
+            line.w = (py / 20) % 220; if (line.w < 0) line.w = -line.w;
+            line.h = 8;
+            SDL_SetRenderDrawColor(renderer, 255, 150, 100, 255);
+            SDL_RenderFillRect(renderer, &line);
+
+            /* Actor count bar */
+            dy += 14;
+            line.x = 8; line.y = dy + 4;
+            line.w = actorCountVal * 2; if (line.w > 220) line.w = 220;
+            line.h = 8;
+            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+            SDL_RenderFillRect(renderer, &line);
+
+            /* Turbo indicator */
+            dy += 14;
+            line.x = 8; line.y = dy + 4;
+            line.w = isTurboMode ? 40 : 10;
+            line.h = 8;
+            SDL_SetRenderDrawColor(renderer, isTurboMode ? 255 : 100,
+                                   isTurboMode ? 0 : 100,
+                                   isTurboMode ? 0 : 100, 255);
+            SDL_RenderFillRect(renderer, &line);
+
+            /* Paused indicator */
+            dy += 14;
+            line.x = 8; line.y = dy + 4;
+            line.w = isPaused ? 40 : 10;
+            line.h = 8;
+            SDL_SetRenderDrawColor(renderer, isPaused ? 255 : 100,
+                                   isPaused ? 165 : 100,
+                                   0, 255);
+            SDL_RenderFillRect(renderer, &line);
+        }
+
+        SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
+    }
+
+    /* Asset viewer (Debug > Asset Viewer) — show sprite atlas */
+    if (assetViewerEnabled) {
         SDL_Rect overlay;
         int si;
         int ox = 10, oy = statusWindowHeight + 10;
@@ -3575,25 +3682,23 @@ void setupPermObjects() {
 void handleKeydownMessage(SDL_Event* e) {
     short sVar1;
     uint32_t actorframeNo;
+    InputBindings *bind = input_bind_get();
+    SDL_Keycode sym = e->key.keysym.sym;
 
-    switch (e->key.keysym.sym) {
-    case SDLK_ESCAPE:
-        // ShowWindow(hSkiMainWnd, 6 /*SW_MINIMIZE*/);
+    /* Hardcoded keys that should never be rebound */
+    if (sym == SDLK_ESCAPE) {
         SDL_MinimizeWindow(hSkiMainWnd);
         return;
-    case SDLK_F3:
-        togglePausedState(); // TODO this is a jmp rather than a call in the original
-        return;
-    case SDLK_RETURN:
+    }
+    if (sym == SDLK_RETURN) {
         if (playerActor != (Actor*)0x0) {
             return;
         }
-        handleGameReset(); // TODO this is a jmp rather than a call in the original
-        return;
-    case SDLK_F2:
         handleGameReset();
         return;
-    case SDLK_F5:
+    }
+    /* Debug keys — always hardcoded */
+    if (sym == SDLK_F5) {
         if (replay_is_recording()) {
             replay_stop_recording();
             replay_save("skifree.replay");
@@ -3601,21 +3706,31 @@ void handleKeydownMessage(SDL_Event* e) {
             replay_start_recording();
         }
         return;
-    case SDLK_F6:
+    }
+    if (sym == SDLK_F6) {
         if (replay_load("skifree.replay")) {
             handleGameReset();
             replay_start_playback();
         }
         return;
-    case SDLK_F9:
+    }
+    if (sym == SDLK_F9) {
         debugOverlayEnabled = !debugOverlayEnabled;
         return;
-    case SDLK_F7:
-        /* Spawn AI opponent */
+    }
+    if (sym == SDLK_F7) {
         ai_spawn(1, 1);
         return;
-    default:
-        break;
+    }
+
+    /* Configurable bindings */
+    if (sym == bind->key_pause) {
+        togglePausedState();
+        return;
+    }
+    if (sym == bind->key_reset) {
+        handleGameReset();
+        return;
     }
 
     if (playerActor == NULL) {
@@ -3624,71 +3739,50 @@ void handleKeydownMessage(SDL_Event* e) {
     actorframeNo = playerActor->frameNo;
     sVar1 = playerActor->isInAir;
     if ((actorframeNo != 0xb) && (actorframeNo != 0x11)) {
-        switch (e->key.keysym.sym) {
-        case SDLK_LEFT:
-            /* numpad 4
-               left */
+        if (sym == bind->key_left) {
+            /* left */
             ski_assert(actorframeNo < 0x16, 0xf63);
 
             actorframeNo = playerTurnFrameNoTbl[actorframeNo].leftFrameNo;
             if (actorframeNo == 7) {
-                //                    iVar2 = (int)playerActor->HorizontalVelMaybe - 8;
-                //                    if (iVar2 <= -8) {
-                //                        iVar2 = -8;
-                //                    }
-                //                    playerActor->HorizontalVelMaybe = (short) iVar2;
                 playerActor->HorizontalVelMaybe = max_(playerActor->HorizontalVelMaybe - 8, -8);
             }
-            break;
-
-        case SDLK_RIGHT:
-            /* numpad 6, Right */
+        } else if (sym == bind->key_right) {
+            /* right */
             ski_assert(actorframeNo < 0x16, 3947);
 
             actorframeNo = playerTurnFrameNoTbl[actorframeNo].rightFrameNo;
             if (actorframeNo == 8) {
-                //                    iVar2 = (int) playerActor->HorizontalVelMaybe + 8;
-                //                    if (iVar2 >= 8) {
-                //                        iVar2 = 8;
-                //                    }
-                //                    playerActor->HorizontalVelMaybe = (short) iVar2;
-
                 playerActor->HorizontalVelMaybe = min_(playerActor->HorizontalVelMaybe + 8, 8);
             }
-            break;
-
-        case SDLK_DOWN:
+        } else if (sym == bind->key_down) {
             if (sVar1 == 0) {
                 actorframeNo = 0;
-                break;
+            } else {
+                switch (actorframeNo) {
+                case 0xd:
+                    actorframeNo = 0x13;
+                    break;
+                case 0x14:
+                    actorframeNo = 0xe;
+                    break;
+                case 0x15:
+                    actorframeNo = 0xf;
+                    break;
+                case 0x12:
+                    actorframeNo = 0xd;
+                    break;
+                case 0x13:
+                    actorframeNo = 0x12;
+                    break;
+                }
             }
+        } else if (sym == bind->key_up) {
             switch (actorframeNo) {
             case 0xd:
-                actorframeNo = 0x13;
-                break;
-            case 0x14:
-                actorframeNo = 0xe;
-                break;
-            case 0x15:
-                actorframeNo = 0xf;
-                break;
-            case 0x12:
-                actorframeNo = 0xd;
-                break;
-            case 0x13:
-                actorframeNo = 0x12;
-                break;
-            }
-            break;
-
-        case SDLK_UP:
-            switch (actorframeNo) {
-            case 0xd:
-                //                switchD_0040628c_caseD_13:
                 actorframeNo = 0x12;
                 break;
             case 0x13:
-                //                switchD_0040628c_caseD_12:
                 actorframeNo = 0xd;
                 break;
             case 0xe:
@@ -3713,12 +3807,12 @@ void handleKeydownMessage(SDL_Event* e) {
                 }
                 break;
             case 0x12:
-                //                switchD_0040628c_caseD_d:
                 actorframeNo = 0x13;
                 break;
             }
-            break;
+        } else
 
+        switch (sym) {
         case SDLK_KP_7:
             if (sVar1 == 0) {
                 actorframeNo = 3;

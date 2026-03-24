@@ -28,6 +28,7 @@ static LRESULT CALLBACK menu_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case IDM_SOUND_VOLUME:  pending_action = MENU_SOUND_VOLUME; break;
         case IDM_CTRL_KEYBOARD: pending_action = MENU_CTRL_KEYBOARD;break;
         case IDM_CTRL_GAMEPAD:  pending_action = MENU_CTRL_GAMEPAD; break;
+        case IDM_MP_SETTINGS:   pending_action = MENU_MP_SETTINGS;   break;
         case IDM_MP_HOST:       pending_action = MENU_MP_HOST;      break;
         case IDM_MP_JOIN:       pending_action = MENU_MP_JOIN;      break;
         case IDM_DEBUG_OVERLAY: pending_action = MENU_DEBUG_OVERLAY; break;
@@ -82,6 +83,8 @@ bool menu_init(void *sdl_window) {
 
     /* Multiplayer */
     mp_menu = CreatePopupMenu();
+    AppendMenuW(mp_menu, MF_STRING, IDM_MP_SETTINGS, L"&Settings...");
+    AppendMenuW(mp_menu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(mp_menu, MF_STRING, IDM_MP_HOST, L"&Host...");
     AppendMenuW(mp_menu, MF_STRING, IDM_MP_JOIN, L"&Join...");
     AppendMenuW(h_menu, MF_POPUP, (UINT_PTR)mp_menu, L"&Multiplayer");

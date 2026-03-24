@@ -18,6 +18,10 @@
 #define NET_PKT_PLAYER_JOIN  2
 #define NET_PKT_PLAYER_LEAVE 3
 #define NET_PKT_GAME_STATE   4
+#define NET_PKT_PLAYER_INFO  6
+#define NET_PKT_READY        7
+#define NET_PKT_GAME_START   8
+#define NET_PKT_KICK         9
 
 #pragma pack(push, 1)
 typedef struct {
@@ -37,6 +41,29 @@ typedef struct {
     uint8_t player_id;
     char name[16];
 } NetPlayerJoin;
+
+typedef struct {
+    uint8_t type;
+    uint8_t player_id;
+    char name[16];
+    uint8_t r, g, b;
+} NetPlayerInfo;
+
+typedef struct {
+    uint8_t type;
+    uint8_t player_id;
+    uint8_t ready;
+} NetReady;
+
+typedef struct {
+    uint8_t type;
+    int8_t spawn_offsets[NET_MAX_PLAYERS];
+} NetGameStart;
+
+typedef struct {
+    uint8_t type;
+    uint8_t player_id;
+} NetKick;
 #pragma pack(pop)
 
 typedef struct {
@@ -48,6 +75,8 @@ typedef struct {
     short is_in_air;
     uint32_t last_update_tick;
     Actor *actor;
+    uint8_t r, g, b;
+    uint8_t ready;
 } NetPlayer;
 
 /* Initialize networking. Returns 1 on success. */
@@ -83,5 +112,23 @@ int net_is_host(void);
 
 /* Get remote player data. */
 NetPlayer *net_get_players(int *count);
+
+/* Set local player info (name + color) and send to peers. */
+void net_set_player_info(const char *name, uint8_t r, uint8_t g, uint8_t b);
+
+/* Set ready state and send to host. */
+void net_set_ready(int ready);
+
+/* Host only: start the game with the given number of bots. */
+void net_start_game(int bot_count);
+
+/* Host only: kick a player. */
+void net_kick_player(int player_id);
+
+/* Returns 1 if we're in the lobby (not yet playing). */
+int net_get_lobby_state(void);
+
+/* Returns 1 if all connected human players have ready=1. */
+int net_all_humans_ready(void);
 
 #endif /* SKIFREE_NET_H */

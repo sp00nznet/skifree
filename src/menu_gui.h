@@ -8,6 +8,7 @@
 #define SKIFREE_MENU_GUI_H
 
 #include <SDL.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +39,13 @@ void menu_gui_show_keyboard_config(void);
 void menu_gui_show_gamepad_config(void);
 void menu_gui_show_host_dialog(void);
 void menu_gui_show_join_dialog(void);
+void menu_gui_show_mp_settings(void);
+
+/* Player identity */
+const char *menu_gui_get_player_name(void);
+uint8_t menu_gui_get_player_r(void);
+uint8_t menu_gui_get_player_g(void);
+uint8_t menu_gui_get_player_b(void);
 
 /* Query results from dialogs */
 
