@@ -1,0 +1,35 @@
+# Build
+build/
+cmake-build-*/
+out/
+
+# IDE
+.vs/
+.vscode/
+*.sln
+*.vcxproj*
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated
+embedded_resources.h
+
+# Resources (extracted from ski32.exe, not redistributed)
+resources/*.bmp
+resources/*.fon
+resources/*.ttf
+resources/*.ICO
+resources/*.ico
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude
+.claude/
+
+# Upstream reference (not part of the project)
+upstream_src/
