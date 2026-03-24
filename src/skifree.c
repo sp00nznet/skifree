@@ -15,6 +15,7 @@
 #include "embedded_resources.h"
 #include "resource.h"
 #include "resources.h"
+#include "sound.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -539,29 +540,38 @@ int initWindows() {
     return 1;
 }
 
+/* Sound effect storage — one SoundEffect per sound slot */
+static SoundEffect soundEffects[9];
+
+/* Map resource IDs to sound file names (from Foone's research) */
+static const char *soundNames[] = {
+    NULL,                /* 0: unused */
+    "sounds/ouch.wav",   /* 1: crash into tree/rock */
+    "sounds/whee.wav",   /* 2: jump off bump */
+    "sounds/woof.wav",   /* 3: dog barks */
+    "sounds/oof.wav",    /* 4: land from air */
+    "sounds/dude.wav",   /* 5: snowboarder crash */
+    "sounds/myhair.wav", /* 6: beginner crash */
+    "sounds/gobble.wav", /* 7: yeti eats player */
+    "sounds/piddle.wav", /* 8: dog pees */
+    "sounds/argh.wav"    /* 9: yeti nearby */
+};
+
 BOOL loadSoundFunc() {
-    sndPlaySoundAFuncPtr = NULL; // sndPlaySoundA;
-    return (sndPlaySoundAFuncPtr != NULL);
+    if (!config_sound_enabled()) return FALSE;
+    return sound_init() ? TRUE : FALSE;
 }
 
 BOOL loadSound(uint32_t resourceId, Sound* sound) {
-    // HRSRC hResInfo;
-    // HGLOBAL pvVar1;
-    // LPVOID pvVar2;
+    if (resourceId < 1 || resourceId > 9) return FALSE;
 
-    // hResInfo = FindResourceA(skiFreeHInstance, MAKEINTRESOURCE(resourceId), "WAVE");
-    // sound->soundResource = hResInfo;
-    // if (hResInfo != NULL)
-    // {
-    //     pvVar1 = LoadResource(skiFreeHInstance, hResInfo);
-    //     sound->soundResource = pvVar1;
-    // }
-    // if (sound->soundResource != NULL)
-    // {
-    //     pvVar2 = LockResource(sound->soundResource);
-    //     sound->soundData = pvVar2;
-    //     return TRUE;
-    // }
+    SoundEffect *effect = &soundEffects[resourceId - 1];
+    sound->effect = effect;
+
+    if (sound_load(effect, soundNames[resourceId])) {
+        sound->soundData = effect; /* non-NULL signals loaded */
+        return TRUE;
+    }
     sound->soundData = NULL;
     return FALSE;
 }
@@ -600,17 +610,8 @@ uint16_t getSpriteIdxForActorType(int actorType) {
 }
 
 void playSound(Sound* sound) {
-    // if (isSoundDisabled == 0)
-    // {
-    //     if ((sound->soundData == NULL) && (sound->soundResource != NULL))
-    //     {
-    //         sound->soundData = LockResource(sound->soundResource);
-    //     }
-    //     if ((sound->soundData != NULL) && (sndPlaySoundAFuncPtr != NULL))
-    //     {
-    //         (*sndPlaySoundAFuncPtr)(sound->soundData, SND_ASYNC | SND_MEMORY);
-    //     }
-    // }
+    if (isSoundDisabled || !sound || !sound->effect) return;
+    sound_play((SoundEffect *)sound->effect);
 }
 // TODO problems in byte matching due to deadcode removal.
 Actor* updateActorPositionWithVelocityMaybe(Actor* actor) {
@@ -650,33 +651,28 @@ void startGameTimer() {
 }
 
 void cleanupSound() {
+    int i;
     if (isSoundDisabled == 0) {
-        if (sndPlaySoundAFuncPtr != NULL) {
-            (*sndPlaySoundAFuncPtr)(0, 0);
+        for (i = 0; i < 9; i++) {
+            sound_free(&soundEffects[i]);
         }
-        if (DAT_0040c78c != NULL) {
-            // FreeLibrary(DAT_0040c78c);
-        }
-        freeSoundResource(&sound_1);
-        freeSoundResource(&sound_2);
-        freeSoundResource(&sound_3);
-        freeSoundResource(&sound_4);
-        freeSoundResource(&sound_5);
-        freeSoundResource(&sound_6);
-        freeSoundResource(&sound_9);
-        freeSoundResource(&sound_7);
-        freeSoundResource(&sound_8);
+        sound_shutdown();
     }
+    freeSoundResource(&sound_1);
+    freeSoundResource(&sound_2);
+    freeSoundResource(&sound_3);
+    freeSoundResource(&sound_4);
+    freeSoundResource(&sound_5);
+    freeSoundResource(&sound_6);
+    freeSoundResource(&sound_9);
+    freeSoundResource(&sound_7);
+    freeSoundResource(&sound_8);
 }
 
 void freeSoundResource(Sound* sound) {
-    if (sound->soundData != NULL) {
-        sound->soundData = NULL;
-    }
-    if (sound->soundResource != NULL) {
-        // FreeResource(sound->soundResource);
-        sound->soundResource = NULL;
-    }
+    sound->soundData = NULL;
+    sound->soundResource = NULL;
+    sound->effect = NULL;
 }
 
 void togglePausedState() {

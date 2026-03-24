@@ -23,6 +23,12 @@ resources/*.ttf
 resources/*.ICO
 resources/*.ico
 
+# Sound effects (extracted from Foone's modified exe)
+sounds/*.wav
+
+# User config
+skifree.ini
+
 # OS
 .DS_Store
 Thumbs.db

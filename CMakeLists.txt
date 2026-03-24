@@ -63,6 +63,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/skifree.c
     src/resources.c
     src/config.c
+    src/sound.c
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 

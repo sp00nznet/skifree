@@ -96,6 +96,7 @@ typedef struct {
 typedef struct {
     void *soundResource;
     void *soundData;
+    void *effect; /* SoundEffect* from sound.h — kept as void* to avoid circular include */
 } Sound;
 
 typedef struct {

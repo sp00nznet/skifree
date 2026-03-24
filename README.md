@@ -60,31 +60,46 @@ python tools/extract_resources.py /path/to/ski32.exe
 
 You'll also need a VGA OEM font file for the status display. On Windows, copy `C:\Windows\Fonts\vgaoem.fon` into the `resources/` directory. On other platforms, any small monospace `.ttf` will work.
 
+### Step 1.5: Get sound effects (optional)
+
+The original SkiFree had code for 9 sound effects but shipped silent — no WAV files were ever embedded. In 2017, [Foone Turing](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/) tracked down the original sound files from Chris Pirih himself and patched them back in.
+
+```bash
+# Download Foone's sound-enabled version from the Wayback Machine
+# https://web.archive.org/web/20240324032244/http://foone.org/downloads/skifree/ski32sounds.zip
+
+# Extract the WAVs from the modified exe
+python tools/extract_resources.py /path/to/ski32sounds/ski32.exe
+```
+
+Or just drop your own WAV files into a `sounds/` directory:
+`ouch.wav`, `whee.wav`, `woof.wav`, `oof.wav`, `dude.wav`, `myhair.wav`, `gobble.wav`, `piddle.wav`, `argh.wav`
+
 ### Step 2: Install SDL2
 
 **Windows (vcpkg):**
 ```bash
-vcpkg install sdl2 sdl2-image sdl2-ttf
+vcpkg install sdl2 sdl2-image sdl2-ttf sdl2-mixer
 ```
 
 **macOS:**
 ```bash
-brew install sdl2 sdl2_image sdl2_ttf
+brew install sdl2 sdl2_image sdl2_ttf sdl2_mixer
 ```
 
 **Ubuntu/Debian:**
 ```bash
-sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev
+sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 ```
 
 **Fedora:**
 ```bash
-sudo dnf install SDL2-devel SDL2_image-devel SDL2_ttf-devel
+sudo dnf install SDL2-devel SDL2_image-devel SDL2_ttf-devel SDL2_mixer-devel
 ```
 
 **Arch:**
 ```bash
-sudo pacman -S sdl2 sdl2_image sdl2_ttf
+sudo pacman -S sdl2 sdl2_image sdl2_ttf sdl2_mixer
 ```
 
 ### Step 3: Build
@@ -132,6 +147,46 @@ Most people never realized these existed. They just skied straight down into the
 - Hit a stump while going uphill to reveal a mushroom (hidden Easter egg from the 32-bit version!)
 - Trees can catch fire if you crash into them while airborne.
 - Walking trees exist. Yes, really. They're rare. Watch the edges of the screen.
+
+## Modding
+
+SkiFree is fully moddable. Create a mod directory and override any resource:
+
+```
+mods/mymod/
+  resources/ski32_1.bmp    # replace any sprite
+  sounds/ouch.wav          # replace any sound effect
+  skifree.ini              # override game settings
+```
+
+Launch with your mod:
+```bash
+skifree --mod mods/mymod
+```
+
+Or set it in `skifree.ini`:
+```ini
+[mods]
+resource_dir=mods/mymod
+```
+
+The resource system checks your mod directory first, then falls back to the embedded originals. You can replace individual sprites without touching the rest.
+
+### Configuration
+
+Copy `skifree.ini.example` to `skifree.ini` to customize:
+
+```ini
+[game]
+classic_mode=0        # 1 = original unmodified behavior
+
+[sound]
+enabled=1
+volume=128
+
+[physics]
+enhanced=0            # 1 = wind, ice, smooth acceleration
+```
 
 ## Credits
 
