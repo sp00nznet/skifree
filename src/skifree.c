@@ -18,11 +18,18 @@
 #include "sound.h"
 #include "ai.h"
 #include "physics.h"
+#include "replay.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
 
-#define ski_assert(exp, line) (void)((exp) || (assertFailed(sourceFilename, line), 0)) // TODO remove need for src param.
+#define ski_assert(exp, line) (void)((exp) || (assertFailed(sourceFilename, line), 0))
+
+/* Gamepad state */
+static SDL_GameController *gameController = NULL;
+
+/* Debug overlay (F9) */
+static int debugOverlayEnabled = 0;
 
 // int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 int main(int argc, char* argv[]) {
@@ -58,12 +65,26 @@ int main(int argc, char* argv[]) {
         printf("[skifree] Classic mode enabled\n");
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0) {
         printf("failed to init SDL: %s\n", SDL_GetError());
         return 1;
     }
 
     TTF_Init();
+
+    /* Open first available game controller */
+    {
+        int j;
+        for (j = 0; j < SDL_NumJoysticks(); j++) {
+            if (SDL_IsGameController(j)) {
+                gameController = SDL_GameControllerOpen(j);
+                if (gameController) {
+                    printf("[input] Controller: %s\n", SDL_GameControllerName(gameController));
+                    break;
+                }
+            }
+        }
+    }
 
     // todo
     // iVar1 = strcmp(lpCmdLine, s_nosound_0040c0fc);
@@ -128,6 +149,39 @@ int main(int argc, char* argv[]) {
                     handleCharMessage((uint32_t)event.text.text[0]);
                 }
                 break;
+            case SDL_CONTROLLERBUTTONDOWN:
+                if (inputEnabled && gameController) {
+                    switch (event.cbutton.button) {
+                    case SDL_CONTROLLER_BUTTON_A:
+                        handleMouseClick();
+                        break;
+                    case SDL_CONTROLLER_BUTTON_START:
+                        togglePausedState();
+                        break;
+                    case SDL_CONTROLLER_BUTTON_BACK:
+                        handleGameReset();
+                        break;
+                    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                        isTurboMode = (isTurboMode == 0);
+                        break;
+                    }
+                }
+                break;
+            case SDL_CONTROLLERAXISMOTION:
+                if (inputEnabled && gameController) {
+                    if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
+                        event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+                        /* Map stick position to mouse-like steering */
+                        short stickX = (short)(event.caxis.value / 256);
+                        short stickY = (short)(event.caxis.value / 256);
+                        if (abs(stickX) > 10 || abs(stickY) > 10) {
+                            handleMouseMoveMessage(
+                                (short)(skierScreenXOffset + stickX),
+                                (short)(skierScreenYOffset + stickY));
+                        }
+                    }
+                }
+                break;
             }
         }
 
@@ -139,6 +193,8 @@ int main(int argc, char* argv[]) {
 
         mainWindowPaint(hSkiMainWnd);
     }
+    if (gameController) SDL_GameControllerClose(gameController);
+    replay_shutdown();
     cleanupSound();
     resource_shutdown();
     config_shutdown();
@@ -868,6 +924,61 @@ void mainWindowPaint(HWND param_1) {
     dstrect.w = statusWindowTotalTextWidth;
     dstrect.h = statusWindowHeight;
     SDL_RenderCopy(renderer, statusWindowTexture, NULL, &dstrect);
+
+    /* Debug overlay (F9) — show sprite atlas and game state */
+    if (debugOverlayEnabled) {
+        SDL_Rect overlay;
+        int si;
+        int ox = 10, oy = statusWindowHeight + 10;
+
+        /* Semi-transparent background */
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        overlay.x = 0; overlay.y = 0;
+        overlay.w = windowWidth; overlay.h = windowClientRect.bottom;
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
+        SDL_RenderFillRect(renderer, &overlay);
+
+        /* Draw all sprites in a grid */
+        for (si = 1; si < NUM_SPRITES; si++) {
+            SDL_Rect src, dst;
+            if (!sprites[si].sheet || sprites[si].width == 0) continue;
+
+            src.x = 0;
+            src.y = sprites[si].sheetYOffset;
+            src.w = sprites[si].width;
+            src.h = sprites[si].height;
+
+            dst.x = ox;
+            dst.y = oy;
+            dst.w = sprites[si].width;
+            dst.h = sprites[si].height;
+
+            SDL_RenderCopy(renderer, sprites[si].sheet, &src, &dst);
+
+            ox += sprites[si].width + 4;
+            if (ox > windowWidth - 60) {
+                ox = 10;
+                oy += 40;
+            }
+        }
+
+        SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
+    }
+
+    /* Replay indicator */
+    if (replay_is_recording()) {
+        SDL_Rect rec_dot;
+        rec_dot.x = 10; rec_dot.y = 10; rec_dot.w = 12; rec_dot.h = 12;
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &rec_dot);
+        SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
+    } else if (replay_is_playing()) {
+        SDL_Rect play_tri;
+        play_tri.x = 10; play_tri.y = 10; play_tri.w = 12; play_tri.h = 12;
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+        SDL_RenderFillRect(renderer, &play_tri);
+        SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -3352,7 +3463,28 @@ void handleKeydownMessage(SDL_Event* e) {
         handleGameReset(); // TODO this is a jmp rather than a call in the original
         return;
     case SDLK_F2:
-        handleGameReset(); // TODO this is a jmp rather than a call in the original
+        handleGameReset();
+        return;
+    case SDLK_F5:
+        if (replay_is_recording()) {
+            replay_stop_recording();
+            replay_save("skifree.replay");
+        } else {
+            replay_start_recording();
+        }
+        return;
+    case SDLK_F6:
+        if (replay_load("skifree.replay")) {
+            handleGameReset();
+            replay_start_playback();
+        }
+        return;
+    case SDLK_F9:
+        debugOverlayEnabled = !debugOverlayEnabled;
+        return;
+    case SDLK_F7:
+        /* Spawn AI opponent */
+        ai_spawn(1, 1);
         return;
     default:
         break;

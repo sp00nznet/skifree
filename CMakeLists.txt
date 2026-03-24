@@ -66,6 +66,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/sound.c
     src/ai.c
     src/physics.c
+    src/replay.c
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 
