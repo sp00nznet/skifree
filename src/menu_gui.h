@@ -33,6 +33,7 @@ void menu_gui_render(void);
 
 /* Show specific dialogs (called from Win32 menu actions) */
 void menu_gui_show_sound_settings(void);
+void menu_gui_show_resolution(void);
 void menu_gui_show_keyboard_config(void);
 void menu_gui_show_gamepad_config(void);
 void menu_gui_show_host_dialog(void);

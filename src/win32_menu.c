@@ -24,12 +24,7 @@ static LRESULT CALLBACK menu_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case IDM_FILE_SAVE_AS:  pending_action = MENU_FILE_SAVE_AS; break;
         case IDM_FILE_LOAD:     pending_action = MENU_FILE_LOAD;    break;
         case IDM_FILE_EXIT:     pending_action = MENU_FILE_EXIT;    break;
-        case IDM_GFX_SCALE1:    pending_action = MENU_GFX_SCALE1;   break;
-        case IDM_GFX_SCALE2:    pending_action = MENU_GFX_SCALE2;   break;
-        case IDM_GFX_SCALE3:    pending_action = MENU_GFX_SCALE3;   break;
-        case IDM_GFX_SCALE4:    pending_action = MENU_GFX_SCALE4;   break;
-        case IDM_GFX_SCALE5:    pending_action = MENU_GFX_SCALE5;   break;
-        case IDM_SOUND_TOGGLE:  pending_action = MENU_SOUND_TOGGLE; break;
+        case IDM_GFX_RESOLUTION: pending_action = MENU_GFX_RESOLUTION; break;
         case IDM_SOUND_VOLUME:  pending_action = MENU_SOUND_VOLUME; break;
         case IDM_CTRL_KEYBOARD: pending_action = MENU_CTRL_KEYBOARD;break;
         case IDM_CTRL_GAMEPAD:  pending_action = MENU_CTRL_GAMEPAD; break;
@@ -69,19 +64,13 @@ bool menu_init(void *sdl_window) {
 
     /* Graphics */
     gfx_menu = CreatePopupMenu();
-    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_SCALE1, L"1x Scale");
-    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_SCALE2, L"2x Scale");
-    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_SCALE3, L"3x Scale");
-    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_SCALE4, L"4x Scale");
-    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_SCALE5, L"5x Scale");
+    AppendMenuW(gfx_menu, MF_STRING, IDM_GFX_RESOLUTION, L"&Resolution...");
     h_gfx_menu = gfx_menu;
     AppendMenuW(h_menu, MF_POPUP, (UINT_PTR)gfx_menu, L"&Graphics");
 
     /* Sound */
     sound_menu = CreatePopupMenu();
-    AppendMenuW(sound_menu, MF_STRING | MF_CHECKED, IDM_SOUND_TOGGLE, L"&Enable Sound");
-    AppendMenuW(sound_menu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(sound_menu, MF_STRING, IDM_SOUND_VOLUME, L"&Volume...");
+    AppendMenuW(sound_menu, MF_STRING, IDM_SOUND_VOLUME, L"&Sound Settings...");
     h_sound_menu = sound_menu;
     AppendMenuW(h_menu, MF_POPUP, (UINT_PTR)sound_menu, L"&Sound");
 
@@ -121,22 +110,8 @@ menu_action_t menu_poll_action(void) {
     return action;
 }
 
-void menu_set_scale_check(int scale) {
-    if (!h_gfx_menu) return;
-    CheckMenuRadioItem(h_gfx_menu, IDM_GFX_SCALE1, IDM_GFX_SCALE5,
-                       IDM_GFX_SCALE1 + scale - 1, MF_BYCOMMAND);
-}
-
-void menu_set_sound_check(int enabled) {
-    if (!h_sound_menu) return;
-    CheckMenuItem(h_sound_menu, IDM_SOUND_TOGGLE,
-                  MF_BYCOMMAND | (enabled ? MF_CHECKED : MF_UNCHECKED));
-}
-
 #else
 /* Stubs for non-Windows platforms */
 bool menu_init(void *sdl_window) { (void)sdl_window; return false; }
 menu_action_t menu_poll_action(void) { return MENU_NONE; }
-void menu_set_scale_check(int scale) { (void)scale; }
-void menu_set_sound_check(int enabled) { (void)enabled; }
 #endif

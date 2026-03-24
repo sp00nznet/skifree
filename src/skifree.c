@@ -241,20 +241,8 @@ int main(int argc, char* argv[]) {
             case MENU_FILE_EXIT:
                 is_running = 0;
                 break;
-            case MENU_GFX_SCALE1: case MENU_GFX_SCALE2: case MENU_GFX_SCALE3:
-            case MENU_GFX_SCALE4: case MENU_GFX_SCALE5: {
-                int scale = action - MENU_GFX_SCALE1 + 1;
-                int w, h;
-                SDL_RenderGetLogicalSize(renderer, &w, &h);
-                if (w > 0 && h > 0) {
-                    SDL_SetWindowSize(hSkiMainWnd, w * scale, h * scale);
-                    menu_set_scale_check(scale);
-                }
-                break;
-            }
-            case MENU_SOUND_TOGGLE:
-                isSoundDisabled = !isSoundDisabled;
-                menu_set_sound_check(!isSoundDisabled);
+            case MENU_GFX_RESOLUTION:
+                menu_gui_show_resolution();
                 break;
             case MENU_SOUND_VOLUME:
                 menu_gui_show_sound_settings();
@@ -306,7 +294,6 @@ int main(int argc, char* argv[]) {
         if (menu_gui_sound_changed()) {
             isSoundDisabled = !menu_gui_get_sound_enabled();
             sound_set_volume(menu_gui_get_volume());
-            menu_set_sound_check(menu_gui_get_sound_enabled());
             menu_gui_clear_sound_changed();
         }
         if (menu_gui_host_requested()) {
@@ -728,15 +715,6 @@ int initWindows() {
     /* Initialize Win32 menu bar and ImGui */
     menu_init(hSkiMainWnd);
     menu_gui_init(hSkiMainWnd, renderer);
-    {
-        int init_scale = config_get_int("graphics", "scale", 1);
-        if (init_scale > 1) {
-            SDL_SetWindowSize(hSkiMainWnd, nWidth * init_scale, nHeight * init_scale);
-        }
-        SDL_RenderSetLogicalSize(renderer, nWidth, nHeight);
-        menu_set_scale_check(init_scale);
-    }
-    menu_set_sound_check(!isSoundDisabled);
 
     /* Initialize input bindings */
     input_bind_init();
