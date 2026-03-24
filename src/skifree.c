@@ -17,6 +17,7 @@
 #include "resources.h"
 #include "sound.h"
 #include "ai.h"
+#include "physics.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -625,6 +626,9 @@ Actor* updateActorPositionWithVelocityMaybe(Actor* actor) {
     inAir = actor->isInAir + actor->inAirCounter;
 
     ski_assert(actor, 1061);
+
+    /* Enhanced physics: apply wind to all actors */
+    physics_apply_wind(&newX, &newY);
 
     if (isTurboMode != 0) {
         newX = newX + actor->HorizontalVelMaybe;
