@@ -23,6 +23,7 @@
 #include "win32_dialogs.h"
 #include "saveload.h"
 #include "input_bind.h"
+#include "menu_gui.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -148,6 +149,13 @@ int main(int argc, char* argv[]) {
     int last_timer = SDL_GetTicks();
     while (is_running) {
         while (SDL_PollEvent(&event)) {
+            menu_gui_process_event(&event);
+
+            /* If ImGui wants input, skip game input handling */
+            if (menu_gui_wants_input() && event.type != SDL_QUIT && event.type != SDL_WINDOWEVENT) {
+                continue;
+            }
+
             switch (event.type) {
             case SDL_QUIT:
                 is_running = 0;
@@ -248,28 +256,21 @@ int main(int argc, char* argv[]) {
                 isSoundDisabled = !isSoundDisabled;
                 menu_set_sound_check(!isSoundDisabled);
                 break;
-            case MENU_SOUND_VOLUME: {
-                int vol = dialog_volume(config_sound_volume());
-                if (vol >= 0) {
-                    sound_set_volume(vol);
-                }
+            case MENU_SOUND_VOLUME:
+                menu_gui_show_sound_settings();
                 break;
-            }
-            case MENU_MP_HOST: {
-                HostSettings hs;
-                if (dialog_mp_host(&hs)) {
-                    net_host(hs.port);
-                }
+            case MENU_MP_HOST:
+                menu_gui_show_host_dialog();
                 break;
-            }
-            case MENU_MP_JOIN: {
-                char ip[64];
-                int port;
-                if (dialog_mp_join(ip, sizeof(ip), &port)) {
-                    net_connect(ip, port);
-                }
+            case MENU_MP_JOIN:
+                menu_gui_show_join_dialog();
                 break;
-            }
+            case MENU_CTRL_KEYBOARD:
+                menu_gui_show_keyboard_config();
+                break;
+            case MENU_CTRL_GAMEPAD:
+                menu_gui_show_gamepad_config();
+                break;
             case MENU_DEBUG_OVERLAY:
                 debugOverlayEnabled = !debugOverlayEnabled;
                 break;
@@ -298,8 +299,28 @@ int main(int argc, char* argv[]) {
         }
         SDL_Delay(1);
 
+        /* ImGui frame + game render */
+        menu_gui_new_frame();
+
+        /* Check ImGui dialog results */
+        if (menu_gui_sound_changed()) {
+            isSoundDisabled = !menu_gui_get_sound_enabled();
+            sound_set_volume(menu_gui_get_volume());
+            menu_set_sound_check(menu_gui_get_sound_enabled());
+            menu_gui_clear_sound_changed();
+        }
+        if (menu_gui_host_requested()) {
+            net_host(menu_gui_get_host_port());
+            menu_gui_clear_host_request();
+        }
+        if (menu_gui_join_requested()) {
+            net_connect(menu_gui_get_join_ip(), menu_gui_get_join_port());
+            menu_gui_clear_join_request();
+        }
+
         mainWindowPaint(hSkiMainWnd);
     }
+    menu_gui_shutdown();
     net_shutdown();
     if (gameController) SDL_GameControllerClose(gameController);
     replay_shutdown();
@@ -704,8 +725,9 @@ int initWindows() {
     }
     updateWindowSize(hSkiMainWnd);
 
-    /* Initialize Win32 menu bar */
+    /* Initialize Win32 menu bar and ImGui */
     menu_init(hSkiMainWnd);
+    menu_gui_init(hSkiMainWnd, renderer);
     {
         int init_scale = config_get_int("graphics", "scale", 1);
         if (init_scale > 1) {
@@ -1104,6 +1126,9 @@ void mainWindowPaint(HWND param_1) {
         SDL_RenderFillRect(renderer, &play_tri);
         SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
     }
+
+    /* Render ImGui on top of everything */
+    menu_gui_render();
 
     SDL_RenderPresent(renderer);
 }

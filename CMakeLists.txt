@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(skifree C)
+project(skifree C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 17)
 
 # --- Find SDL2 and friends ---
 find_package(SDL2 REQUIRED)
@@ -73,12 +74,21 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/win32_dialogs.c
     src/saveload.c
     src/input_bind.c
+    src/menu_gui.cpp
+    third_party/imgui/imgui.cpp
+    third_party/imgui/imgui_draw.cpp
+    third_party/imgui/imgui_tables.cpp
+    third_party/imgui/imgui_widgets.cpp
+    third_party/imgui/backends/imgui_impl_sdl2.cpp
+    third_party/imgui/backends/imgui_impl_sdlrenderer2.cpp
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     src
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party/imgui
+    ${CMAKE_SOURCE_DIR}/third_party/imgui/backends
 )
 
 # --- Compiler settings ---
