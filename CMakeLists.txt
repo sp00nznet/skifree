@@ -8,6 +8,7 @@ set(CMAKE_C_STANDARD 99)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(SDL2_mixer REQUIRED)
 
 # --- Embed resources at build time ---
 file(GLOB resource_files "resources/*.bmp" "resources/*.fon" "resources/*.ttf" "resources/*.ICO")
@@ -60,6 +61,8 @@ endif()
 
 target_sources(${PROJECT_NAME} PRIVATE
     src/skifree.c
+    src/resources.c
+    src/config.c
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 
@@ -102,4 +105,11 @@ if(TARGET SDL2_ttf::SDL2_ttf)
 elseif(SDL2TTF_LIBRARY)
     target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2TTF_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${SDL2TTF_LIBRARY})
+endif()
+
+if(TARGET SDL2_mixer::SDL2_mixer)
+    target_link_libraries(${PROJECT_NAME} SDL2_mixer::SDL2_mixer)
+elseif(SDL2MIXER_LIBRARY)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2MIXER_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${SDL2MIXER_LIBRARY})
 endif()

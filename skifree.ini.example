@@ -1,0 +1,25 @@
+# SkiFree Configuration
+# Copy this to skifree.ini and customize.
+
+[game]
+# Set to 1 for original unmodified behavior
+classic_mode=0
+# Game tick interval in ms (40 = original 25 FPS)
+update_interval=40
+
+[sound]
+# Enable/disable sound effects
+enabled=1
+# Volume 0-128
+volume=128
+
+[physics]
+# Enable enhanced physics (wind, ice, smooth accel)
+enhanced=0
+# Wind force (pixels per tick, 0 = no wind)
+wind_x=0
+wind_y=0
+
+[mods]
+# Path to mod directory (empty = embedded resources only)
+# resource_dir=mods/mymod

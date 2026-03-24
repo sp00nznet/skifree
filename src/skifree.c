@@ -10,9 +10,11 @@
 
 #include "skifree.h"
 #include "consts.h"
+#include "config.h"
 #include "data.h"
 #include "embedded_resources.h"
 #include "resource.h"
+#include "resources.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -22,12 +24,39 @@
 // int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 int main(int argc, char* argv[]) {
     int iVar1;
+    int i;
     BOOL retVal;
-    // MSG msg;
     SDL_Event event;
+    const char *mod_dir = NULL;
+    const char *config_path = "skifree.ini";
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
-        printf("failed to init\n");
+    /* Parse command-line arguments */
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--mod") == 0 && i + 1 < argc) {
+            mod_dir = argv[++i];
+        } else if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
+            config_path = argv[++i];
+        } else if (strcmp(argv[i], "nosound") == 0) {
+            isSoundDisabled = 1;
+        }
+    }
+
+    /* Initialize config and resource systems */
+    config_init(config_path);
+
+    /* If mod dir specified in config but not CLI, use config value */
+    if (!mod_dir) {
+        const char *cfg_mod = config_get_str("mods", "resource_dir", "");
+        if (cfg_mod[0]) mod_dir = cfg_mod;
+    }
+    resource_init(mod_dir);
+
+    if (config_classic_mode()) {
+        printf("[skifree] Classic mode enabled\n");
+    }
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
+        printf("failed to init SDL: %s\n", SDL_GetError());
         return 1;
     }
 
@@ -108,6 +137,8 @@ int main(int argc, char* argv[]) {
         mainWindowPaint(hSkiMainWnd);
     }
     cleanupSound();
+    resource_shutdown();
+    config_shutdown();
     return 0;
 }
 
@@ -934,9 +965,19 @@ BOOL calculateStatusWindowDimensions(HWND hWnd) {
     // {
     //     statusWindowFont = SelectObject(statusWindowDC, statusWindowFont);
     // }
-    embedded_resource_t* res = get_embedded_resource_by_name("resources/vgaoem.fon");
-    SDL_RWops* src = SDL_RWFromConstMem(res->content, res->len);
-    statusWindowFont = TTF_OpenFontRW(src, 1, 12);
+    {
+        Resource *font_res = resource_load("resources/vgaoem.fon");
+        SDL_RWops *font_rw;
+        if (!font_res) {
+            printf("[resources] ERROR: Could not load font\n");
+            exit(1);
+        }
+        font_rw = SDL_RWFromConstMem(font_res->content, font_res->len);
+        statusWindowFont = TTF_OpenFontRW(font_rw, 1, 12);
+        /* Note: TTF_OpenFontRW with freesrc=1 takes ownership of RWops,
+         * but we can't free font_res content while font is in use.
+         * For disk-loaded fonts, this leaks the buffer — acceptable. */
+    }
     if (statusWindowFont == NULL) {
         exit(1);
     }
@@ -1204,15 +1245,21 @@ BOOL loadBitmaps(HWND hWnd) {
 
 HBITMAP loadBitmapResource(uint32_t resourceId) {
     char filename[256];
-
-    // return LoadBitmapA(skiFreeHInstance, MAKEINTRESOURCE(resourceId));
+    Resource *res;
+    SDL_RWops *rw;
+    SDL_Surface *bitmap;
 
     sprintf(filename, "resources/ski32_%d.bmp", resourceId);
-    // SDL_Surface* bitmap = IMG_Load(filename);
 
-    embedded_resource_t* res = get_embedded_resource_by_name(filename);
-    SDL_RWops* src = SDL_RWFromConstMem(res->content, res->len);
-    SDL_Surface* bitmap = IMG_Load_RW(src, 1);
+    res = resource_load(filename);
+    if (!res) {
+        printf("[resources] ERROR: Could not load %s\n", filename);
+        return NULL;
+    }
+
+    rw = SDL_RWFromConstMem(res->content, res->len);
+    bitmap = IMG_Load_RW(rw, 1);
+    resource_free(res);
     return bitmap;
 }
 
