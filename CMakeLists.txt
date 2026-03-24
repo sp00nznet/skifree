@@ -84,7 +84,7 @@ if(MSVC)
         -DSDL_MAIN_HANDLED
         -DWIN32_LEAN_AND_MEAN
     )
-    target_compile_options(${PROJECT_NAME} PRIVATE /W3)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W3 /bigobj)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-unused-variable)
 endif()

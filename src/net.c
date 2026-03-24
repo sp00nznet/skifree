@@ -10,19 +10,18 @@
  * Cross-platform socket abstraction handles Windows (winsock2) vs POSIX.
  */
 
-#include "net.h"
-#include "skifree.h"
-#include "data.h"
-#include <stdio.h>
-#include <string.h>
-
+/* winsock2.h MUST come before any of our headers on Windows
+ * to avoid type redefinition conflicts with windows.h */
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 typedef SOCKET socket_t;
 #define SOCKET_INVALID INVALID_SOCKET
 #define sock_close closesocket
+/* Prevent our types.h from redefining Windows types */
+#define SKIFREE_NO_WIN_TYPEDEFS
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -34,6 +33,16 @@ typedef int socket_t;
 #define SOCKET_INVALID -1
 #define sock_close close
 #endif
+
+#include "net.h"
+#include "consts.h"
+#include "skifree.h"
+#include <stdio.h>
+#include <string.h>
+
+/* Extern declarations for globals we need from data.h
+ * (data.h can't be included in multiple .c files — it defines, not declares) */
+extern Actor *actorListPtr;
 
 static int net_initialized = 0;
 static int is_hosting = 0;

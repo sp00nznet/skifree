@@ -11,6 +11,9 @@
 
 #include <SDL.h>
 
+/* When compiling net.c on Windows, real Windows types are already defined
+ * via winsock2.h/windows.h. Skip our shim typedefs in that case. */
+#ifndef SKIFREE_NO_WIN_TYPEDEFS
 typedef int BOOL;
 typedef void *HDC;
 typedef void *HWND;
@@ -31,6 +34,7 @@ typedef struct _RECT {
     long right;
     long bottom;
 } RECT, *PRECT;
+#endif /* SKIFREE_NO_WIN_TYPEDEFS */
 
 typedef struct {
     HDC sheetDC;
@@ -104,6 +108,8 @@ typedef struct {
     int rightFrameNo;
 } PlayerTurnFrameNoLookupTbl;
 
+#ifndef SKIFREE_NO_WIN_TYPEDEFS
 typedef SDL_Surface *HBITMAP;
+#endif
 
 #endif /* SKIFREE_TYPES_H */

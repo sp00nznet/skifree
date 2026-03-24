@@ -1,17 +1,5 @@
 # SkiFree: Reborn
 
-```
-        \O/        ___
-         |        /   \
-        / \      | SKI |
-       /   \      \   /
-      /     \      ---
-     /  ___  \
-    /  / F \  \
-   /  /     \  \
-  /__/       \__\
-```
-
 **The yeti is back. And this time, he compiles on everything.**
 
 This is a static recompilation of [SkiFree](https://ski.ihoc.net/) — the legendary 1991 Windows game by Chris Pirih that traumatized an entire generation of computer users. You know the one. You're just skiing along, minding your own business, doing some sick jumps, dodging trees... and then *he* shows up.
@@ -62,7 +50,7 @@ You'll also need a VGA OEM font file for the status display. On Windows, copy `C
 
 ### Step 1.5: Get sound effects (optional)
 
-The original SkiFree had code for 9 sound effects but shipped silent — no WAV files were ever embedded. In 2017, [Alice Averlong (formerly Foone)](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/) tracked down the original sound files from Chris Pirih himself and patched them back in.
+The original SkiFree had code for 9 sound effects but shipped silent — no WAV files were ever embedded. In 2017, [Alice Averlong](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/) tracked down the original sound files from Chris Pirih himself and patched them back in.
 
 ```bash
 # Download Alice's sound-enabled version from the Wayback Machine
@@ -193,7 +181,7 @@ enhanced=0            # 1 = wind, ice, smooth acceleration
 - **Chris Pirih** — Created SkiFree in 1991. A true legend. [ski.ihoc.net](https://ski.ihoc.net/)
 - **Eric Fry (yuv422)** — Decompiled ski32.exe back to C using Ghidra. Herculean effort. [skifree_decomp](https://github.com/yuv422/skifree_decomp)
 - **jeff-1amstudios** — Ported the decompiled code to SDL2. [skifree_sdl](https://github.com/jeff-1amstudios/skifree_sdl)
-- **Alice Averlong (formerly Foone)** — Reverse-engineered the sound system and mapped all the sound effects. [Blog post](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/)
+- **Alice Averlong** — Reverse-engineered the sound system and mapped all the sound effects. [Blog post](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/)
 
 ## License
 

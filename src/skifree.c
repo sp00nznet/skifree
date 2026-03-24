@@ -12,7 +12,6 @@
 #include "consts.h"
 #include "config.h"
 #include "data.h"
-#include "embedded_resources.h"
 #include "resource.h"
 #include "resources.h"
 #include "sound.h"

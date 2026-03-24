@@ -9,10 +9,20 @@
 
 #include "ai.h"
 #include "skifree.h"
-#include "data.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+
+/* Extern declarations for globals from data.h */
+extern int playerX;
+extern short playerY;
+extern Actor *actorListPtr;
+extern BOOL isSsGameMode;
+extern BOOL isGsGameMode;
+extern BOOL isFsGameMode;
+extern PermObject *currentSlalomFlag;
+extern int elapsedTime;
+extern const ActorVelStruct ActorVelStruct_ARRAY_0040a308[];
 
 static AIOpponent opponents[MAX_AI_OPPONENTS];
 static int num_active = 0;
