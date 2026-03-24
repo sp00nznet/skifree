@@ -16,6 +16,7 @@
 #include "resource.h"
 #include "resources.h"
 #include "sound.h"
+#include "ai.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -543,7 +544,7 @@ int initWindows() {
 /* Sound effect storage — one SoundEffect per sound slot */
 static SoundEffect soundEffects[9];
 
-/* Map resource IDs to sound file names (from Foone's research) */
+/* Map resource IDs to sound file names (from Alice Averlong's research) */
 static const char *soundNames[] = {
     NULL,                /* 0: unused */
     "sounds/ouch.wav",   /* 1: crash into tree/rock */
@@ -1645,7 +1646,7 @@ int randomActorType2() {
 
 Actor* updateActor(Actor* actor) {
     ski_assert(actor, 2311);
-    ski_assert(actor->typeMaybe < 11 && !actor->permObject, 2312);
+    ski_assert((actor->typeMaybe < 11 || actor->typeMaybe == ACTOR_TYPE_19_AI_SKIER) && !actor->permObject, 2312);
 
     switch (actor->typeMaybe) {
     case ACTOR_TYPE_0_PLAYER:
@@ -1656,6 +1657,8 @@ Actor* updateActor(Actor* actor) {
         return updateActorType2_dog(actor);
     case ACTOR_TYPE_1_BEGINNER:
         return updateActorType1_Beginner(actor);
+    case ACTOR_TYPE_19_AI_SKIER:
+        return updateActorType19_aiSkier(actor);
     default:
         assertFailed(sourceFilename, 2335);
         return actor;
@@ -2839,6 +2842,8 @@ BOOL resetGame(void) {
     elapsedTime = 0;
     updateTimerDurationMillis = 40;
     redrawRequired = 1;
+    ai_reset();
+    ai_init();
     return 1;
 }
 
@@ -3517,7 +3522,7 @@ void updateGameState() {
     for (pAVar7 = actorListPtr; pAVar7 != NULL; pAVar7 = pAVar7->next) {
         if ((pAVar7->flags & (FLAG_2 | FLAG_8)) == 0) {
             pAVar7->flags &= 0xffffffdf;
-            if ((pAVar7->permObject == NULL) && (pAVar7->typeMaybe < 0xb)) {
+            if ((pAVar7->permObject == NULL) && (pAVar7->typeMaybe < 0xb || pAVar7->typeMaybe == ACTOR_TYPE_19_AI_SKIER)) {
                 updateActor(pAVar7);
             }
             if (((pAVar7->flags & FLAG_1) == 0) && (pAVar7 != playerActor)) {
@@ -3539,6 +3544,7 @@ void updateGameState() {
     FUN_004046e0(&PermObjectList_0040c658);
     FUN_004046e0(&PermObjectList_0040c738);
     updateAllPermObjectsInList(&PermObjectList_0040c720);
+    ai_update_all();
     removeFlag8ActorsFromList();
     for (pAVar7 = actorListPtr; pAVar7 != NULL; pAVar7 = pAVar7->next) {
         if ((pAVar7->flags & FLAG_2) == 0) {

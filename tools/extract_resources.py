@@ -7,7 +7,7 @@ Extracts bitmap sprites and (if present) WAV sound effects.
 Usage:
     python extract_resources.py <path_to_ski32.exe>
 
-For sound effects, use Foone's modified ski32.exe which has WAVs embedded:
+For sound effects, use Alice Averlong's modified ski32.exe which has WAVs embedded:
     Download from: https://web.archive.org/web/20240324032244/http://foone.org/downloads/skifree/ski32sounds.zip
 
 For the original game (sprites only):
@@ -20,7 +20,7 @@ import sys
 import os
 import struct
 
-# Sound slot names from Foone's research
+# Sound slot names from Alice Averlong's research
 SOUND_NAMES = {
     1: "ouch",    # crash into tree/rock
     2: "whee",    # jump off bump
@@ -96,7 +96,7 @@ def extract_with_pefile(exe_path, output_dir):
                     print(f"  Found icon resource #{resource_id_entry.id}")
 
         # RT_RCDATA (10) or custom "WAVE" type — check for WAV resources
-        # Foone's modified exe embeds sounds as named WAVE resources
+        # Alice Averlong's modified exe embeds sounds as named WAVE resources
         elif resource_type.id == 10 or (resource_type.name and str(resource_type.name) == "WAVE"):
             sounds_dir = os.path.join(output_dir, "..", "sounds")
             os.makedirs(sounds_dir, exist_ok=True)
@@ -155,7 +155,7 @@ def extract_with_pefile(exe_path, output_dir):
 
     print(f"\nExtracted {bitmap_count} bitmaps, {sound_count} sounds to {output_dir}/")
     if sound_count == 0:
-        print("\nNo sounds found in this exe. For sound effects, use Foone's modified version:")
+        print("\nNo sounds found in this exe. For sound effects, use Alice Averlong's modified version:")
         print("  https://web.archive.org/web/20240324032244/http://foone.org/downloads/skifree/ski32sounds.zip")
     print("\nYou're ready to build! Run: cmake -B build && cmake --build build")
 

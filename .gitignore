@@ -23,7 +23,7 @@ resources/*.ttf
 resources/*.ICO
 resources/*.ico
 
-# Sound effects (extracted from Foone's modified exe)
+# Sound effects (extracted from Alice Averlong's modified exe)
 sounds/*.wav
 
 # User config
