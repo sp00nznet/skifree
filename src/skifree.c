@@ -2713,6 +2713,15 @@ Actor* handleActorCollision(Actor* actor1, Actor* actor2) {
     sVar9 = actor2->spritePtr->height + actor2->isInAir;
     switch (actor1->typeMaybe) {
     case ACTOR_TYPE_10_WALKING_TREE:
+        /* In tree horde mode, trees eat the player like yetis */
+        if ((treeHordeActive || config_get_int("fun", "tree_horde", 0)) && actor2 == playerActor) {
+            playSound(&sound_7); /* gobble sound */
+            if ((actor2->flags & FLAG_1) != 0) {
+                actor2 = duplicateAndLinkActor(actor2);
+            }
+            actorSetFlag8IfFlag1IsUnset(actor2);
+            return setActorFrameNo(actor1, 0x3c);
+        }
         actor1->HorizontalVelMaybe = 0;
         return setActorFrameNo(actor1, 0x3c);
     case ACTOR_TYPE_5_YETI_TOP:
@@ -3735,13 +3744,14 @@ void setupPermObjects() {
     permObject.maybeY = 32060;
     addPermObject(&PermObjectList_0040c720, &permObject);
 
-    /* Yeti Horde mode: spawn dozens of yetis in a ring around the play area */
+    /* Yeti Horde mode: spawn yetis as PermObjects close to the player
+     * so they activate quickly. Place them in a tighter ring. */
     if (yetiHordeActive || config_get_int("fun", "yeti_horde", 0)) {
         int yi;
         short horde_types[] = { ACTOR_TYPE_5_YETI_TOP, ACTOR_TYPE_6_YETI_BOTTOM,
                                 ACTOR_TYPE_7_YETI_LEFT, ACTOR_TYPE_8_YETI_RIGHT };
         printf("[fun] YETI HORDE MODE ACTIVATED!\n");
-        for (yi = 0; yi < 24 && permObjectCount < NUM_PERM_OBJECTS - 4; yi++) {
+        for (yi = 0; yi < 20 && permObjectCount < NUM_PERM_OBJECTS - 4; yi++) {
             int type_idx = yi % 4;
             permObject.actorTypeMaybe = horde_types[type_idx];
             permObject.actorFrameNo = 0x2a;
@@ -3750,22 +3760,23 @@ void setupPermObjects() {
             permObject.unk_0x1e = 0;
             permObject.yVelocity = 0;
             permObject.xVelocity = 0;
+            /* Spawn in a ring ~800-2000 pixels from the player start */
             switch (type_idx) {
-            case 0: /* top */
-                permObject.maybeX = (short)(-8000 + yi * 700);
-                permObject.maybeY = (short)(-2060 - yi * 200);
+            case 0: /* top - spread across, just above */
+                permObject.maybeX = (short)(-600 + yi * 120);
+                permObject.maybeY = (short)(-800 - yi * 80);
                 break;
-            case 1: /* bottom */
-                permObject.maybeX = (short)(-8000 + yi * 700);
-                permObject.maybeY = (short)(32060 + yi * 200);
+            case 1: /* bottom - spread across, below */
+                permObject.maybeX = (short)(-600 + yi * 120);
+                permObject.maybeY = (short)(1200 + yi * 100);
                 break;
             case 2: /* left */
-                permObject.maybeX = (short)(-16060 - yi * 200);
-                permObject.maybeY = (short)(-5000 + yi * 1500);
+                permObject.maybeX = (short)(-1000 - yi * 80);
+                permObject.maybeY = (short)(-400 + yi * 200);
                 break;
             case 3: /* right */
-                permObject.maybeX = (short)(16060 + yi * 200);
-                permObject.maybeY = (short)(-5000 + yi * 1500);
+                permObject.maybeX = (short)(1000 + yi * 80);
+                permObject.maybeY = (short)(-400 + yi * 200);
                 break;
             }
             addPermObject(&PermObjectList_0040c720, &permObject);
