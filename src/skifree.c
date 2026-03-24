@@ -19,6 +19,10 @@
 #include "physics.h"
 #include "replay.h"
 #include "net.h"
+#include "win32_menu.h"
+#include "win32_dialogs.h"
+#include "saveload.h"
+#include "input_bind.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -201,6 +205,78 @@ int main(int argc, char* argv[]) {
                         }
                     }
                 }
+                break;
+            }
+        }
+
+        /* Poll Win32 menu actions */
+        {
+            menu_action_t action = menu_poll_action();
+            switch (action) {
+            case MENU_FILE_SAVE:
+                save_game_state("skifree_save.json");
+                break;
+            case MENU_FILE_SAVE_AS: {
+                char path[512];
+                if (dialog_save_file(path, sizeof(path))) {
+                    save_game_state(path);
+                }
+                break;
+            }
+            case MENU_FILE_LOAD: {
+                char path[512];
+                if (dialog_open_file(path, sizeof(path))) {
+                    load_game_state(path);
+                }
+                break;
+            }
+            case MENU_FILE_EXIT:
+                is_running = 0;
+                break;
+            case MENU_GFX_SCALE1: case MENU_GFX_SCALE2: case MENU_GFX_SCALE3:
+            case MENU_GFX_SCALE4: case MENU_GFX_SCALE5: {
+                int scale = action - MENU_GFX_SCALE1 + 1;
+                int w, h;
+                SDL_RenderGetLogicalSize(renderer, &w, &h);
+                if (w > 0 && h > 0) {
+                    SDL_SetWindowSize(hSkiMainWnd, w * scale, h * scale);
+                    menu_set_scale_check(scale);
+                }
+                break;
+            }
+            case MENU_SOUND_TOGGLE:
+                isSoundDisabled = !isSoundDisabled;
+                menu_set_sound_check(!isSoundDisabled);
+                break;
+            case MENU_SOUND_VOLUME: {
+                int vol = dialog_volume(config_sound_volume());
+                if (vol >= 0) {
+                    sound_set_volume(vol);
+                }
+                break;
+            }
+            case MENU_MP_HOST: {
+                HostSettings hs;
+                if (dialog_mp_host(&hs)) {
+                    net_host(hs.port);
+                }
+                break;
+            }
+            case MENU_MP_JOIN: {
+                char ip[64];
+                int port;
+                if (dialog_mp_join(ip, sizeof(ip), &port)) {
+                    net_connect(ip, port);
+                }
+                break;
+            }
+            case MENU_DEBUG_OVERLAY:
+                debugOverlayEnabled = !debugOverlayEnabled;
+                break;
+            case MENU_ABOUT:
+                dialog_about(hSkiMainWnd);
+                break;
+            default:
                 break;
             }
         }
@@ -627,6 +703,23 @@ int initWindows() {
         return 0;
     }
     updateWindowSize(hSkiMainWnd);
+
+    /* Initialize Win32 menu bar */
+    menu_init(hSkiMainWnd);
+    {
+        int init_scale = config_get_int("graphics", "scale", 1);
+        if (init_scale > 1) {
+            SDL_SetWindowSize(hSkiMainWnd, nWidth * init_scale, nHeight * init_scale);
+        }
+        SDL_RenderSetLogicalSize(renderer, nWidth, nHeight);
+        menu_set_scale_check(init_scale);
+    }
+    menu_set_sound_check(!isSoundDisabled);
+
+    /* Initialize input bindings */
+    input_bind_init();
+    input_bind_load();
+
     return 1;
 }
 

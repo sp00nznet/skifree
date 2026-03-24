@@ -9,6 +9,7 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 find_package(SDL2_mixer REQUIRED)
+find_package(cJSON CONFIG REQUIRED)
 
 # --- Embed resources at build time ---
 file(GLOB resource_files "resources/*.bmp" "resources/*.fon" "resources/*.ttf" "resources/*.ICO")
@@ -68,6 +69,10 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/physics.c
     src/replay.c
     src/net.c
+    src/win32_menu.c
+    src/win32_dialogs.c
+    src/saveload.c
+    src/input_bind.c
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 
@@ -91,8 +96,9 @@ endif()
 
 # --- Platform-specific ---
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} ws2_32)
+    target_link_libraries(${PROJECT_NAME} ws2_32 comdlg32)
 endif()
+target_link_libraries(${PROJECT_NAME} cjson)
 
 # --- Link libraries ---
 # Handle different SDL2 CMake configurations
