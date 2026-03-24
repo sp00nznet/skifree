@@ -2713,14 +2713,13 @@ Actor* handleActorCollision(Actor* actor1, Actor* actor2) {
     sVar9 = actor2->spritePtr->height + actor2->isInAir;
     switch (actor1->typeMaybe) {
     case ACTOR_TYPE_10_WALKING_TREE:
-        /* In tree horde mode, trees eat the player like yetis */
+        /* In tree horde mode, trees crash the player hard (like hitting a tree at speed) */
         if ((treeHordeActive || config_get_int("fun", "tree_horde", 0)) && actor2 == playerActor) {
-            playSound(&sound_7); /* gobble sound */
-            if ((actor2->flags & FLAG_1) != 0) {
-                actor2 = duplicateAndLinkActor(actor2);
-            }
-            actorSetFlag8IfFlag1IsUnset(actor2);
-            return setActorFrameNo(actor1, 0x3c);
+            playSound(&sound_1); /* ouch sound */
+            addStylePoints(-64);
+            actor2->HorizontalVelMaybe = 0;
+            actor2->verticalVelocityMaybe = 0;
+            setActorFrameNo(actor2, 0xb); /* crash frame — skier falls down */
         }
         actor1->HorizontalVelMaybe = 0;
         return setActorFrameNo(actor1, 0x3c);

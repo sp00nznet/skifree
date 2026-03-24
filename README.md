@@ -2,6 +2,8 @@
 
 **The yeti is back. And this time, he compiles on everything.**
 
+![SkiFree: Reborn](start.png)
+
 This is a static recompilation of [SkiFree](https://ski.ihoc.net/) — the legendary 1991 Windows game by Chris Pirih that traumatized an entire generation of computer users. You know the one. You're just skiing along, minding your own business, doing some sick jumps, dodging trees... and then *he* shows up.
 
 This project takes the original `ski32.exe` binary — every function, every sprite, every pixel of that terrifying yeti — and rebuilds it from decompiled C source code to run natively on modern operating systems with a ton of new features on top.
