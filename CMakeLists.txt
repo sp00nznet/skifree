@@ -67,6 +67,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/ai.c
     src/physics.c
     src/replay.c
+    src/net.c
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
 
@@ -86,6 +87,11 @@ if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-unused-variable)
+endif()
+
+# --- Platform-specific ---
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} ws2_32)
 endif()
 
 # --- Link libraries ---

@@ -19,6 +19,7 @@
 #include "ai.h"
 #include "physics.h"
 #include "replay.h"
+#include "net.h"
 #include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
@@ -39,6 +40,9 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
     const char *mod_dir = NULL;
     const char *config_path = "skifree.ini";
+    const char *net_host_addr = NULL;
+    int net_port = NET_DEFAULT_PORT;
+    int net_hosting = 0;
 
     /* Parse command-line arguments */
     for (i = 1; i < argc; i++) {
@@ -46,6 +50,16 @@ int main(int argc, char* argv[]) {
             mod_dir = argv[++i];
         } else if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
             config_path = argv[++i];
+        } else if (strcmp(argv[i], "--host") == 0) {
+            net_hosting = 1;
+            if (i + 1 < argc && argv[i+1][0] != '-') {
+                net_port = atoi(argv[++i]);
+            }
+        } else if (strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {
+            net_host_addr = argv[++i];
+            if (i + 1 < argc && argv[i+1][0] != '-') {
+                net_port = atoi(argv[++i]);
+            }
         } else if (strcmp(argv[i], "nosound") == 0) {
             isSoundDisabled = 1;
         }
@@ -118,6 +132,13 @@ int main(int argc, char* argv[]) {
     //     iVar1 = GetMessageA(&msg, NULL, 0, 0);
     // }
 
+    /* Start network if requested */
+    if (net_hosting) {
+        net_host(net_port);
+    } else if (net_host_addr) {
+        net_connect(net_host_addr, net_port);
+    }
+
     paintStatusWindow(NULL);
 
     int is_running = 1;
@@ -188,11 +209,23 @@ int main(int argc, char* argv[]) {
         if (isGameTimerRunning && SDL_GetTicks() - last_timer >= 40) {
             timerUpdateFunc();
             last_timer = SDL_GetTicks();
+
+            /* Network: send and receive player state */
+            if (net_is_active() && playerActor) {
+                net_send_player_state(
+                    playerActor->xPosMaybe, playerActor->yPosMaybe,
+                    playerActor->spriteIdx2, playerActor->isInAir,
+                    playerActor->HorizontalVelMaybe,
+                    playerActor->verticalVelocityMaybe);
+                net_update();
+                net_update_actors();
+            }
         }
         SDL_Delay(1);
 
         mainWindowPaint(hSkiMainWnd);
     }
+    net_shutdown();
     if (gameController) SDL_GameControllerClose(gameController);
     replay_shutdown();
     cleanupSound();
