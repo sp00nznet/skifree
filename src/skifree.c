@@ -673,10 +673,10 @@ int initWindows() {
     nHeight = SCREEN_HEIGHT;
     lpWindowName = getCachedString(IDS_TITLE);
 
-    // original code was asking for overall window size, here we have to convert it
-    // to client size to get the correct original ratio
-    nWidth = 1008;
-    nHeight = nWidth * 0.97718253968254f;
+    /* Base game resolution — smaller than the original 1008x978 so the window
+     * fits on screen with the Win32 menu bar visible. Scale up via Graphics menu. */
+    nWidth = 640;
+    nHeight = 480;
 
     hSkiMainWnd = SDL_CreateWindow(lpWindowName,
         SDL_WINDOWPOS_CENTERED,
