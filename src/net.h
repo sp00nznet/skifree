@@ -131,4 +131,13 @@ int net_get_lobby_state(void);
 /* Returns 1 if all connected human players have ready=1. */
 int net_all_humans_ready(void);
 
+/* Get our spawn X offset (set when game starts). */
+int net_get_spawn_offset(void);
+
+/* Get multiplayer game settings (set by host). */
+int net_get_mp_extra_yetis(void);
+int net_get_mp_super_speed(void);
+int net_get_mp_star_power(void);
+void net_set_mp_settings(int extra_yetis, int super_speed, int star_power);
+
 #endif /* SKIFREE_NET_H */

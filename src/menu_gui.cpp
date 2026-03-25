@@ -423,6 +423,7 @@ void menu_gui_new_frame(void) {
                     ImGui::BeginDisabled();
                 }
                 if (ImGui::Button("Start Game", ImVec2(-1, 30))) {
+                    net_set_mp_settings(extra_yetis ? 1 : 0, super_speed ? 1 : 0, star_power ? 1 : 0);
                     net_start_game(bot_count);
                     show_host_dialog = false;
                 }

@@ -38,10 +38,17 @@ static int debugOverlayEnabled = 0;
 
 /* Asset viewer (Debug > Asset Viewer) — shows sprite grid */
 static int assetViewerEnabled = 0;
+static SDL_Window *assetViewerWindow = NULL;
+static SDL_Renderer *assetViewerRenderer = NULL;
 
 /* Horde mode runtime flags */
 static int yetiHordeActive = 0;
 static int treeHordeActive = 0;
+
+/* Star power state */
+static int starPowerActive = 0;
+static DWORD starPowerEndTick = 0;
+static int starPowerColorCycle = 0;
 
 /* FPS tracking for debug overlay */
 static Uint32 fpsLastTime = 0;
@@ -174,6 +181,17 @@ int main(int argc, char* argv[]) {
                 is_running = 0;
                 break;
             case SDL_WINDOWEVENT:
+                /* Handle asset viewer window close */
+                if (event.window.event == SDL_WINDOWEVENT_CLOSE &&
+                    assetViewerWindow &&
+                    event.window.windowID == SDL_GetWindowID(assetViewerWindow)) {
+                    assetViewerEnabled = 0;
+                    if (assetViewerRenderer) SDL_DestroyRenderer(assetViewerRenderer);
+                    SDL_DestroyWindow(assetViewerWindow);
+                    assetViewerRenderer = NULL;
+                    assetViewerWindow = NULL;
+                    break;
+                }
                 HandleWindowMessage(&event);
                 break;
             case SDL_KEYDOWN:
@@ -281,6 +299,19 @@ int main(int argc, char* argv[]) {
                 break;
             case MENU_DEBUG_ASSETS:
                 assetViewerEnabled = !assetViewerEnabled;
+                if (assetViewerEnabled && !assetViewerWindow) {
+                    assetViewerWindow = SDL_CreateWindow("SkiFree Asset Viewer",
+                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                        640, 480, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+                    if (assetViewerWindow) {
+                        assetViewerRenderer = SDL_CreateRenderer(assetViewerWindow, -1, SDL_RENDERER_ACCELERATED);
+                    }
+                } else if (!assetViewerEnabled && assetViewerWindow) {
+                    if (assetViewerRenderer) SDL_DestroyRenderer(assetViewerRenderer);
+                    SDL_DestroyWindow(assetViewerWindow);
+                    assetViewerRenderer = NULL;
+                    assetViewerWindow = NULL;
+                }
                 break;
             case MENU_MODS_YETI_HORDE:
                 yetiHordeActive = !yetiHordeActive;
@@ -310,9 +341,18 @@ int main(int argc, char* argv[]) {
 
                 /* Detect lobby -> game transition (host clicked Start or client received START) */
                 if (was_in_lobby && !net_get_lobby_state()) {
-                    printf("[net] Game starting — resetting!\n");
+                    int spawn_off = net_get_spawn_offset();
+                    printf("[net] Game starting — resetting! Spawn offset: %d\n", spawn_off);
                     handleGameReset();
-                    /* TODO: apply spawn offsets per player index */
+                    /* Apply spawn offset so players start side-by-side */
+                    if (playerActor && spawn_off != 0) {
+                        updateActorPositionMaybe(playerActor,
+                            (short)(playerActor->xPosMaybe + spawn_off),
+                            playerActor->yPosMaybe, playerActor->isInAir);
+                    }
+                    /* Apply MP game settings */
+                    if (net_get_mp_extra_yetis()) yetiHordeActive = 1;
+                    if (net_get_mp_super_speed()) isTurboMode = 1;
                     was_in_lobby = 0;
                 }
                 if (net_get_lobby_state()) {
@@ -356,6 +396,8 @@ int main(int argc, char* argv[]) {
 
         mainWindowPaint(hSkiMainWnd);
     }
+    if (assetViewerRenderer) SDL_DestroyRenderer(assetViewerRenderer);
+    if (assetViewerWindow) SDL_DestroyWindow(assetViewerWindow);
     menu_gui_shutdown();
     net_shutdown();
     if (gameController) SDL_GameControllerClose(gameController);
@@ -1197,44 +1239,47 @@ void mainWindowPaint(HWND param_1) {
         SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
     }
 
-    /* Asset viewer (Debug > Asset Viewer) — show sprite atlas */
-    if (assetViewerEnabled) {
-        SDL_Rect overlay;
+    /* Asset viewer — render to its own window */
+    if (assetViewerEnabled && assetViewerRenderer) {
         int si;
-        int ox = 10, oy = statusWindowHeight + 10;
+        int ox = 10, oy = 10;
+        int avw, avh;
 
-        /* Semi-transparent background */
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        overlay.x = 0; overlay.y = 0;
-        overlay.w = windowWidth; overlay.h = windowClientRect.bottom;
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
-        SDL_RenderFillRect(renderer, &overlay);
+        SDL_GetRendererOutputSize(assetViewerRenderer, &avw, &avh);
+        SDL_SetRenderDrawColor(assetViewerRenderer, 40, 40, 40, 255);
+        SDL_RenderClear(assetViewerRenderer);
 
-        /* Draw all sprites in a grid */
+        /* Draw all sprites in a grid in the asset viewer window.
+         * We need to create textures on the asset viewer renderer since
+         * textures are renderer-specific. For simplicity, use the main
+         * renderer textures with a copy-to-surface-to-texture approach. */
+        /* Simple approach: draw colored rectangles showing sprite dimensions */
         for (si = 1; si < NUM_SPRITES; si++) {
-            SDL_Rect src, dst;
-            if (!sprites[si].sheet || sprites[si].width == 0) continue;
-
-            src.x = 0;
-            src.y = sprites[si].sheetYOffset;
-            src.w = sprites[si].width;
-            src.h = sprites[si].height;
+            SDL_Rect dst;
+            if (sprites[si].width == 0) continue;
 
             dst.x = ox;
             dst.y = oy;
             dst.w = sprites[si].width;
             dst.h = sprites[si].height;
 
-            SDL_RenderCopy(renderer, sprites[si].sheet, &src, &dst);
+            /* Alternate colors to distinguish sprites */
+            SDL_SetRenderDrawColor(assetViewerRenderer,
+                (si * 37) % 200 + 55, (si * 71) % 200 + 55, (si * 113) % 200 + 55, 255);
+            SDL_RenderFillRect(assetViewerRenderer, &dst);
 
-            ox += sprites[si].width + 4;
-            if (ox > windowWidth - 60) {
+            /* Border */
+            SDL_SetRenderDrawColor(assetViewerRenderer, 200, 200, 200, 255);
+            SDL_RenderDrawRect(assetViewerRenderer, &dst);
+
+            ox += sprites[si].width + 6;
+            if (ox > avw - 60) {
                 ox = 10;
-                oy += 40;
+                oy += 50;
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
+        SDL_RenderPresent(assetViewerRenderer);
     }
 
     /* Replay indicator */
@@ -2036,7 +2081,7 @@ int randomActorType2() {
 
 Actor* updateActor(Actor* actor) {
     ski_assert(actor, 2311);
-    ski_assert((actor->typeMaybe < 11 || actor->typeMaybe == ACTOR_TYPE_19_AI_SKIER) && !actor->permObject, 2312);
+    ski_assert((actor->typeMaybe < 11 || actor->typeMaybe == ACTOR_TYPE_19_AI_SKIER || actor->typeMaybe == ACTOR_TYPE_20_STAR_POWER) && !actor->permObject, 2312);
 
     switch (actor->typeMaybe) {
     case ACTOR_TYPE_0_PLAYER:
@@ -2049,6 +2094,9 @@ Actor* updateActor(Actor* actor) {
         return updateActorType1_Beginner(actor);
     case ACTOR_TYPE_19_AI_SKIER:
         return updateActorType19_aiSkier(actor);
+    case ACTOR_TYPE_20_STAR_POWER:
+        /* Star power pickup just bobs in place — no movement */
+        return actor;
     default:
         assertFailed(sourceFilename, 2335);
         return actor;
@@ -2075,6 +2123,20 @@ Actor* updatePlayerActor(Actor* actor) {
     ActorframeNo = actor->frameNo;
     ski_assert(actor, 2022);
     ski_assert(actor->typeMaybe == 0, 2023);
+
+    /* Star power: check expiry and apply speed boost */
+    if (starPowerActive) {
+        if (currentTickCount >= starPowerEndTick) {
+            starPowerActive = 0;
+            printf("[star] Star power expired\n");
+        } else {
+            /* Speed boost: increase vertical velocity */
+            if (actor->verticalVelocityMaybe > 0 && actor->verticalVelocityMaybe < 32) {
+                actor->verticalVelocityMaybe += 2;
+            }
+            starPowerColorCycle = (starPowerColorCycle + 1) % 6;
+        }
+    }
 
     if (ActorframeNo == 0xb) {
         ski_assert(actor->isInAir == 0, 2027);
@@ -2728,6 +2790,12 @@ Actor* handleActorCollision(Actor* actor1, Actor* actor2) {
     case ACTOR_TYPE_7_YETI_LEFT:
     case ACTOR_TYPE_8_YETI_RIGHT:
         if (actor2 == playerActor) {
+            /* Star power: yeti can't eat you! */
+            if (starPowerActive) {
+                addStylePoints(200);
+                playSound(&sound_2);
+                break;
+            }
             ski_assert(iVar4 == 0, 2393);
             playSound(&sound_7);
             if ((actor2->flags & FLAG_1) != 0) {
@@ -2749,6 +2817,19 @@ Actor* handleActorCollision(Actor* actor1, Actor* actor2) {
         if (local_c == 0x11)
             break;
         switch (iVar4) {
+        case ACTOR_TYPE_20_STAR_POWER:
+            /* Pick up the star — activate star power! */
+            starPowerActive = 1;
+            starPowerEndTick = currentTickCount + 5000; /* 5 seconds */
+            starPowerColorCycle = 0;
+            playSound(&sound_2); /* whee! */
+            addStylePoints(50);
+            /* Remove the star pickup */
+            if ((actor2->flags & FLAG_1) != 0) {
+                actor2 = duplicateAndLinkActor(actor2);
+            }
+            actorSetFlag8IfFlag1IsUnset(actor2);
+            return setActorFrameNo(actor1, local_c);
         case ACTOR_TYPE_15_BUMP:
             if (sVar1 < 1) {
                 actor1->inAirCounter = 4;
@@ -3743,14 +3824,16 @@ void setupPermObjects() {
     permObject.maybeY = 32060;
     addPermObject(&PermObjectList_0040c720, &permObject);
 
-    /* Yeti Horde mode: spawn yetis as PermObjects close to the player
-     * so they activate quickly. Place them in a tighter ring. */
+    /* Yeti Horde mode: spawn yetis both as PermObjects (for the AI chase behavior)
+     * AND as close-range PermObjects in the existing yeti list.
+     * The normal 4 yetis are already in the list — add more closer to player. */
     if (yetiHordeActive || config_get_int("fun", "yeti_horde", 0)) {
         int yi;
         short horde_types[] = { ACTOR_TYPE_5_YETI_TOP, ACTOR_TYPE_6_YETI_BOTTOM,
                                 ACTOR_TYPE_7_YETI_LEFT, ACTOR_TYPE_8_YETI_RIGHT };
         printf("[fun] YETI HORDE MODE ACTIVATED!\n");
-        for (yi = 0; yi < 20 && permObjectCount < NUM_PERM_OBJECTS - 4; yi++) {
+        /* Spawn close-range yetis that will activate immediately */
+        for (yi = 0; yi < 16 && permObjectCount < NUM_PERM_OBJECTS - 4; yi++) {
             int type_idx = yi % 4;
             permObject.actorTypeMaybe = horde_types[type_idx];
             permObject.actorFrameNo = 0x2a;
@@ -3759,23 +3842,24 @@ void setupPermObjects() {
             permObject.unk_0x1e = 0;
             permObject.yVelocity = 0;
             permObject.xVelocity = 0;
-            /* Spawn in a ring ~800-2000 pixels from the player start */
+            /* Place yetis in visible range from player start at Y=0
+             * Use same positioning as normal yetis but MUCH closer */
             switch (type_idx) {
-            case 0: /* top - spread across, just above */
-                permObject.maybeX = (short)(-600 + yi * 120);
-                permObject.maybeY = (short)(-800 - yi * 80);
+            case 0: /* top yeti */
+                permObject.maybeX = (short)(-300 + yi * 80);
+                permObject.maybeY = (short)(-300 - yi * 40);
                 break;
-            case 1: /* bottom - spread across, below */
-                permObject.maybeX = (short)(-600 + yi * 120);
-                permObject.maybeY = (short)(1200 + yi * 100);
+            case 1: /* bottom yeti */
+                permObject.maybeX = (short)(-300 + yi * 80);
+                permObject.maybeY = (short)(400 + yi * 50);
                 break;
-            case 2: /* left */
-                permObject.maybeX = (short)(-1000 - yi * 80);
-                permObject.maybeY = (short)(-400 + yi * 200);
+            case 2: /* left yeti */
+                permObject.maybeX = (short)(-500 - yi * 40);
+                permObject.maybeY = (short)(-200 + yi * 100);
                 break;
-            case 3: /* right */
-                permObject.maybeX = (short)(1000 + yi * 80);
-                permObject.maybeY = (short)(-400 + yi * 200);
+            case 3: /* right yeti */
+                permObject.maybeX = (short)(500 + yi * 40);
+                permObject.maybeY = (short)(-200 + yi * 100);
                 break;
             }
             addPermObject(&PermObjectList_0040c720, &permObject);
@@ -3792,6 +3876,20 @@ void setupPermObjects() {
                 short tx = (short)(ski_random(2000) - 1000);
                 short ty = (short)(500 + ski_random(8000));
                 updateActorPositionMaybe(tree, tx, ty, 0);
+            }
+        }
+    }
+
+    /* Star power pickups: spawn along the freestyle course center */
+    if (config_get_int("fun", "star_power", 0) || (net_is_active() && net_get_mp_star_power())) {
+        int si;
+        printf("[fun] Star power pickups enabled!\n");
+        for (si = 0; si < 8; si++) {
+            Actor *star = addActorOfTypeWithSpriteIdx(ACTOR_TYPE_20_STAR_POWER, 0x34);
+            if (star) {
+                short sx = (short)(ski_random(300) - 150);
+                short sy = (short)(800 + si * 2000);
+                updateActorPositionMaybe(star, sx, sy, 0);
             }
         }
     }
@@ -3999,7 +4097,7 @@ void updateGameState() {
     for (pAVar7 = actorListPtr; pAVar7 != NULL; pAVar7 = pAVar7->next) {
         if ((pAVar7->flags & (FLAG_2 | FLAG_8)) == 0) {
             pAVar7->flags &= 0xffffffdf;
-            if ((pAVar7->permObject == NULL) && (pAVar7->typeMaybe < 0xb || pAVar7->typeMaybe == ACTOR_TYPE_19_AI_SKIER)) {
+            if ((pAVar7->permObject == NULL) && (pAVar7->typeMaybe < 0xb || pAVar7->typeMaybe == ACTOR_TYPE_19_AI_SKIER || pAVar7->typeMaybe == ACTOR_TYPE_20_STAR_POWER)) {
                 updateActor(pAVar7);
             }
             if (((pAVar7->flags & FLAG_1) == 0) && (pAVar7 != playerActor)) {
@@ -4521,7 +4619,19 @@ void drawActor(HDC hdc, Actor* actor) {
             dstrect.y = rect->top;
             dstrect.w = spriteWidth;
             dstrect.h = spriteHeight;
-            SDL_RenderCopy(renderer, sprite->sheet, &srcrect, &dstrect);
+            /* Star power: rainbow color cycle on player sprite */
+            if (starPowerActive && actor_00 == playerActor) {
+                static const Uint8 rainbow[][3] = {
+                    {255,100,100}, {255,255,100}, {100,255,100},
+                    {100,255,255}, {100,100,255}, {255,100,255}
+                };
+                int ci = starPowerColorCycle % 6;
+                SDL_SetTextureColorMod(sprite->sheet, rainbow[ci][0], rainbow[ci][1], rainbow[ci][2]);
+                SDL_RenderCopy(renderer, sprite->sheet, &srcrect, &dstrect);
+                SDL_SetTextureColorMod(sprite->sheet, 255, 255, 255);
+            } else {
+                SDL_RenderCopy(renderer, sprite->sheet, &srcrect, &dstrect);
+            }
 
             local_24->flags |= FLAG_1;
             *local_4 = local_24->actorPtr;

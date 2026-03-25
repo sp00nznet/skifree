@@ -25,6 +25,8 @@ wind_y=0
 yeti_horde=0
 # Tree Horde: walking trees chase the player at yeti speed
 tree_horde=0
+# Star Power pickups on the course (Mario Kart homage)
+star_power=0
 
 [mods]
 # Path to mod directory (empty = embedded resources only)

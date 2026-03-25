@@ -50,6 +50,10 @@ static int is_connected = 0;
 static int local_player_id = 0;
 static int tick_counter = 0;
 static int lobby_active = 0;
+static int my_spawn_offset = 0;
+static int mp_extra_yetis = 0;
+static int mp_super_speed = 0;
+static int mp_star_power = 0;
 
 static socket_t udp_socket = SOCKET_INVALID;
 static struct sockaddr_in peer_addrs[NET_MAX_PLAYERS];
@@ -303,10 +307,10 @@ void net_update(void) {
             break;
         }
         case NET_PKT_GAME_START: {
-            /* Client receives game start — reset and begin */
+            NetGameStart *start = (NetGameStart *)buf;
+            my_spawn_offset = (int)start->spawn_offsets[local_player_id];
             lobby_active = 0;
-            printf("[net] Game starting!\n");
-            /* The actual game reset is handled by the caller polling net_get_lobby_state */
+            printf("[net] Game starting! Spawn offset: %d\n", my_spawn_offset);
             break;
         }
         case NET_PKT_KICK: {
@@ -438,8 +442,9 @@ void net_start_game(int bot_count) {
                (struct sockaddr *)&peer_addrs[i], sizeof(peer_addrs[i]));
     }
 
+    my_spawn_offset = (int)pkt.spawn_offsets[local_player_id];
     lobby_active = 0;
-    printf("[net] Game started (bots: %d)\n", bot_count);
+    printf("[net] Game started (bots: %d, my offset: %d)\n", bot_count, my_spawn_offset);
 }
 
 void net_kick_player(int player_id) {
@@ -480,4 +485,12 @@ int net_all_humans_ready(void) {
         if (!players[i].ready) return 0;
     }
     return any_connected;
+}
+
+int net_get_spawn_offset(void) { return my_spawn_offset; }
+int net_get_mp_extra_yetis(void) { return mp_extra_yetis; }
+int net_get_mp_super_speed(void) { return mp_super_speed; }
+int net_get_mp_star_power(void) { return mp_star_power; }
+void net_set_mp_settings(int ey, int ss, int sp) {
+    mp_extra_yetis = ey; mp_super_speed = ss; mp_star_power = sp;
 }
