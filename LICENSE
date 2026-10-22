@@ -56,3 +56,9 @@ THIRD PARTY
 
 `third_party/imgui/` is Dear ImGui, (c) 2014-2025 Omar Cornut, MIT licensed
 under its own terms. It is vendored, not ours.
+
+`third_party/cjson/` is cJSON, (c) 2009-2017 Dave Gamble and cJSON
+contributors, MIT licensed under its own terms (its LICENSE is beside it).
+
+`resources/ProggyClean.ttf` is ProggyClean, (c) 2004, 2005 Tristan Grimmer,
+MIT licensed; the status window's font where Windows' vgaoem.fon is absent.
