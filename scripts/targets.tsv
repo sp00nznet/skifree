@@ -12,3 +12,6 @@ gamecube	devkitpro/devkitppc	bash scripts/build_gamecube.sh /src/build-gamecube	
 dreamcast	kazade/dreamcast-sdk	bash scripts/build_dreamcast.sh /src/build-dreamcast	skifree.elf skifree.cdi	Boots to the title screen in Flycast
 ps3	ps3dev/ps3dev:submodules	bash scripts/build_ps3.sh /src/build-ps3	EBOOT.BIN	Runs in RPCS3 (title screen, ~60 fps)
 xenon	free60/libxenon	bash scripts/build_libxenon.sh /src/build-xenon	skifree.elf32	Xbox 360: builds; untested (no emulator runs libxenon homebrew; needs RGH/JTAG)
+ps2	ps2dev/ps2dev	apk add -q bash >/dev/null 2>&1; bash scripts/build_ps2.sh /src/build-ps2	skifree.elf	Runs in PCSX2 (title screen, 60 fps)
+xbox	ghcr.io/xboxdev/nxdk	apk add -q bash >/dev/null 2>&1; bash scripts/build_xbox.sh /src/build-xbox	skifree.xbe skifree.iso	Original Xbox: runs in xemu (title screen)
+ps4	openorbisofficial/toolchain	bash scripts/build_ps4.sh /src/build-ps4	skifree.pkg	Builds; untested (no PS4 emulator; installs on a jailbroken PS4)
