@@ -3,16 +3,31 @@
   "repo": "sp00nznet/skifree",
   "accent": "#2a6fdb",
   "note": {
-    "default": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles, Android and the browser at once, all in Docker (it must be installed and running). The first run downloads the toolchains, tens of GB, and takes an hour or more; the builds land in builds/, with builds/README.txt saying what each one is known to do.",
-    "darwin": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles, Android and the browser at once, all in Docker Desktop (it must be installed and running). The toolchains are x86 images: on Apple silicon they run emulated and take several hours. The builds land in builds/."
+    "default": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles you pick, plus Android and the browser if you like, all in Docker (it must be installed and running). Only the toolchains for what you pick are downloaded. The builds land in builds/.",
+    "darwin": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles you pick, all in Docker Desktop (it must be installed and running). Only the toolchains for what you pick are downloaded; they are x86 images, so on Apple silicon they run emulated and slowly. The builds land in builds/."
   },
   "game": {
     "name": "SkiFree",
     "files": ["ski32*.exe|ski32*.zip"]
   },
   "setup": {
-    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup-consoles.ps1", "-Yes", "-Game", "{game}"],
-    "default": ["bash", "setup-consoles.sh", "--yes", "--game-dir", "{game}"]
+    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup-consoles.ps1", "-Yes", "-Game", "{game}", "-Targets", "{choices}"],
+    "default": ["bash", "setup-consoles.sh", "--yes", "--game-dir", "{game}", "--targets", "{choices}"]
   },
+  "choices": [
+    { "id": "psp", "label": "PSP", "note": "EBOOT.PBP · toolchain 0.8 GB" },
+    { "id": "vita", "label": "PS Vita", "note": ".vpk · toolchain 2.2 GB" },
+    { "id": "ps2", "label": "PlayStation 2", "note": ".elf · toolchain 1.1 GB" },
+    { "id": "ps3", "label": "PlayStation 3", "note": "EBOOT.BIN · toolchain 13 GB" },
+    { "id": "ps4", "label": "PlayStation 4", "note": ".pkg, jailbroken · toolchain 0.9 GB" },
+    { "id": "3ds", "label": "Nintendo 3DS", "note": ".3dsx · toolchain 2.1 GB" },
+    { "id": "wii", "label": "Wii", "note": ".dol · toolchain 2.6 GB" },
+    { "id": "gamecube", "label": "GameCube", "note": ".dol · same toolchain as Wii" },
+    { "id": "xbox", "label": "Original Xbox", "note": ".xbe / .iso · toolchain 1.4 GB" },
+    { "id": "xenon", "label": "Xbox 360", "note": "XeLL .elf32, untested · 3.6 GB" },
+    { "id": "dreamcast", "label": "Dreamcast", "note": ".cdi / .elf · toolchain 4.6 GB" },
+    { "id": "android", "label": "Android", "note": ".apk · toolchain 5.6 GB" },
+    { "id": "wasm", "label": "Browser", "note": "WebAssembly · toolchain 3.5 GB" }
+  ],
   "play": "Console builds (recomp).*"
 }

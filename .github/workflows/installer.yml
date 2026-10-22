@@ -15,18 +15,18 @@ permissions:
 
 jobs:
   installer:
-    uses: sp00nznet/recomp-launcher/.github/workflows/installer.yml@v0.3.0
+    uses: sp00nznet/recomp-launcher/.github/workflows/installer.yml@v0.4.0
     with:
-      launcher-ref: v0.3.0
+      launcher-ref: v0.4.0
       name: SkiFree-Recomp-Installer
 
   # The optional second download: the same installer, building every console
   # (launcher-consoles/launcher.json, setup-consoles.sh) in Docker.
   consoles:
     needs: installer   # one release job at a time: the first creates the release
-    uses: sp00nznet/recomp-launcher/.github/workflows/installer.yml@v0.3.0
+    uses: sp00nznet/recomp-launcher/.github/workflows/installer.yml@v0.4.0
     with:
-      launcher-ref: v0.3.0
+      launcher-ref: v0.4.0
       manifest: launcher-consoles
       name: SkiFree-Consoles-Installer
 

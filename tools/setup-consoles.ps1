@@ -66,8 +66,9 @@ if ($g) {
     $mount = @('-v', "$((Resolve-Path $g).Path):/game:ro")
 }
 $log = Join-Path $Root 'build-logs\prep.log'
-$code = Exec $log (@('docker', 'run', '--rm', '-u', '0', '-v', "${Root}:/src") + $mount + @('-w', '/src', 'emscripten/emsdk', 'bash', 'scripts/prep.sh'))
-$out = Get-Content $log | Where-Object { $_ -notmatch '^Embedding' }
+# a small image (about 70 MB with python3 and cmake), not one of the console toolchains
+$code = Exec $log (@('docker', 'run', '--rm', '-u', '0', '-v', "${Root}:/src") + $mount + @('-w', '/src', 'alpine:3.20', 'sh', '-c', 'apk add -q bash python3 cmake && bash scripts/prep.sh'))
+$out = Get-Content $log | Where-Object { $_ -notmatch '^(Embedding|Digest|Status|[0-9a-f]{12}|\S*: Pull)' }
 $out | Select-Object -Last 4 | ForEach-Object { Write-Host "  $_" }
 if ($code -ne 0) {
     $why = ($out | Select-String 'Setup stopped: (.*)' | Select-Object -Last 1)

@@ -1,8 +1,10 @@
 # SkiFree on consoles, Android and the browser
 
-The **SkiFree Consoles Installer** (or `Setup Consoles.cmd` / `./setup-consoles.sh`)
-builds every target below from your own `ski32.exe`, inside Docker. Each lands in
-`builds/<target>/`, and `builds/README.txt` says what built.
+The **SkiFree Consoles Installer** builds the targets below that you tick, from your own
+`ski32.exe`, inside Docker. Only the toolchains for what you pick are downloaded. Each lands in
+`builds/<target>/`, and `builds/README.txt` says what built. By hand:
+`./setup-consoles.sh --targets dreamcast,vita,android` (or `Setup Consoles.cmd -Targets ...`);
+with no `--targets` it builds them all.
 
 These builds are the *lite* game: the original SkiFree with a controller, but no
 menus, no network game and an 8x8 font in the status box. The yeti is unchanged.

@@ -70,12 +70,12 @@ the same menus drop down.
 
 **The yeti, everywhere.** A second, optional download, `SkiFree-Consoles-Installer`
 (same [releases page](https://github.com/sp00nznet/skifree/releases/latest)), builds SkiFree
-from your `ski32.exe` for **PSP, PS Vita, PS2, PS3, PS4, Wii, GameCube, 3DS, original Xbox,
-Xbox 360, Dreamcast, Android and the browser** in one go. It needs only
-[Docker](https://www.docker.com/products/docker-desktop/), running. The first run downloads
-the toolchains (tens of GB) and takes an hour or more. Every console but the PS4 and Xbox 360
-has been seen running to the title screen in its emulator; those two build but have nothing
-to run in. Which file goes where, the controls, and what's known to work:
+from your `ski32.exe` for the systems you tick: **PSP, PS Vita, PS2, PS3, PS4, Wii, GameCube,
+3DS, original Xbox, Xbox 360, Dreamcast, Android and the browser**. Only the toolchains for what
+you pick are downloaded (each 1 to 13 GB, shown beside it). It needs only
+[Docker](https://www.docker.com/products/docker-desktop/), running. Every console but the PS4
+and Xbox 360 has been seen running to the title screen in its emulator; those two build but have
+nothing to run in. Which file goes where, the controls, and what's known to work:
 **[docs/consoles.md](docs/consoles.md)**.
 
 Without the installer: `Setup Consoles.cmd` on Windows or `./setup-consoles.sh --targets psp,wii`

@@ -1,8 +1,8 @@
 #!/bin/bash
 # The step every console shares: take the sprites and sounds out of the
 # player's ski32.exe (mounted at /game, or $1) and embed them in
-# build-gen/embedded_resources.h. Needs python3 and cmake (the emscripten
-# image has both). Skips the extraction when resources/ already has them.
+# build-gen/embedded_resources.h. Needs python3 and cmake (setup-consoles
+# runs it in alpine with both added). Skips the extraction when resources/ already has them.
 set -e
 cd "$(dirname "$0")/.."
 GAME="${1:-/game}"

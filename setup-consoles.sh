@@ -56,9 +56,10 @@ elif [ ! -f resources/ski32_1.bmp ]; then
     [ -d "$GAME" ] || fail "there's no folder at '$GAME'."
     GAMEDIR=(-v "$(cd "$GAME" && pwd):/game:ro")
 fi
-out="$(docker run --rm -u 0 -v "$ROOT:/src" "${GAMEDIR[@]}" -w /src emscripten/emsdk bash scripts/prep.sh 2>&1)"
+# a small image (about 70 MB with python3 and cmake), not one of the console toolchains
+out="$(docker run --rm -u 0 -v "$ROOT:/src" "${GAMEDIR[@]}" -w /src alpine:3.20 sh -c 'apk add -q bash python3 cmake && bash scripts/prep.sh' 2>&1)"
 code=$?
-echo "$out" | grep -v '^Embedding' | tail -n 4 | sed 's/^/  /'
+echo "$out" | grep -Ev '^(Embedding|Digest|Status|[0-9a-f]{12}|[^ ]*: Pull)' | tail -n 4 | sed 's/^/  /'
 mine resources sounds build-gen
 if [ $code -ne 0 ]; then
     why="$(echo "$out" | sed -n 's/.*Setup stopped: //p' | tail -n 1)"

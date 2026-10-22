@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-10-22
+
+### Changed
+- **Pick your consoles.** The consoles installer now opens on a box per system; only what you
+  tick is built, so only those toolchains are downloaded, not all thirteen
+  ([recomp-launcher 0.4.0](https://github.com/sp00nznet/recomp-launcher/releases/tag/v0.4.0)).
+- The step every console shares (taking the sprites out of `ski32.exe`) runs in a 70 MB Alpine
+  image instead of the 3.5 GB Emscripten one.
+
 ## 0.2.0 - 2026-10-22
 
 SkiFree on 13 more systems, and the sound effects play.
