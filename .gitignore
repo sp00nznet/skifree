@@ -46,3 +46,9 @@ upstream_src/
 # Setup output
 setup.log
 SkiFree (recomp).*
+build-gen/
+build-wasm/
+build-psp/
+build-lite/
+builds/
+build-logs/

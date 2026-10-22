@@ -215,7 +215,16 @@ int main(int argc, char* argv[]) {
                 if (inputEnabled && gameController) {
                     InputBindings *pbind = input_bind_get();
                     int btn = event.cbutton.button;
-                    if (btn == pbind->pad_jump) {
+                    if (btn >= SDL_CONTROLLER_BUTTON_DPAD_UP && btn <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT) {
+                        /* the D-pad is the arrow keys */
+                        SDL_Event key;
+                        SDL_zero(key);
+                        key.type = SDL_KEYDOWN;
+                        key.key.keysym.sym = btn == SDL_CONTROLLER_BUTTON_DPAD_UP ? pbind->key_up
+                                           : btn == SDL_CONTROLLER_BUTTON_DPAD_DOWN ? pbind->key_down
+                                           : btn == SDL_CONTROLLER_BUTTON_DPAD_LEFT ? pbind->key_left : pbind->key_right;
+                        handleKeydownMessage(&key);
+                    } else if (btn == pbind->pad_jump) {
                         handleMouseClick();
                     } else if (btn == pbind->pad_pause) {
                         togglePausedState();
@@ -227,19 +236,21 @@ int main(int argc, char* argv[]) {
                 }
                 break;
             case SDL_CONTROLLERAXISMOTION:
-                if (inputEnabled && gameController) {
-                    if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
-                        event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
-                        /* Map stick position to mouse-like steering */
-                        short stickX = (short)(event.caxis.value / 256);
-                        short stickY = (short)(event.caxis.value / 256);
-                        if (abs(stickX) > 10 || abs(stickY) > 10) {
-                            handleMouseMoveMessage(
-                                (short)(skierScreenXOffset + stickX),
-                                (short)(skierScreenYOffset + stickY));
-                        }
+                if (inputEnabled && gameController &&
+                    (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)) {
+                    /* The stick points where the mouse would: past a dead zone,
+                     * up to 128 pixels from the skier */
+                    static short stick[2];
+                    stick[event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY] = (short)(event.caxis.value / 256);
+                    if (abs(stick[0]) > 32 || abs(stick[1]) > 32) {
+                        handleMouseMoveMessage((short)(skierScreenXOffset + stick[0]),
+                                               (short)(skierScreenYOffset + stick[1]));
                     }
                 }
+                break;
+            case SDL_CONTROLLERDEVICEADDED:
+                /* a pad that turns up after start (a Wii Remote, a Bluetooth pad) */
+                if (!gameController) gameController = SDL_GameControllerOpen(event.cdevice.which);
                 break;
             }
         }
@@ -780,7 +791,11 @@ int initWindows() {
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         nWidth, nHeight,
+#if defined(SKIFREE_LITE) && !defined(__EMSCRIPTEN__)
+        SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);   /* a console: its whole screen */
+#else
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+#endif
 
     /* 0: a GPU renderer if there is one, else SDL's software one */
     renderer = SDL_CreateRenderer(hSkiMainWnd, -1, 0);
