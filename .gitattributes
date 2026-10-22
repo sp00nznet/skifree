@@ -1,3 +1,4 @@
 *.sh text eol=lf
 *.ttf binary
 *.cmd text eol=crlf
+*.tsv text eol=lf

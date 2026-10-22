@@ -1,0 +1,6 @@
+# Every target setup-consoles.sh / tools/setup-consoles.ps1 builds, one per line, tab-separated:
+#   target  image  command (run by sh in the image, in /src = this repo)  files to collect from build-<target>/  state
+# "state" is what's known to work. Update it when someone runs a build; the
+# setup prints it beside each result, and the README's table says the same.
+wasm	emscripten/emsdk	bash scripts/build_wasm.sh /src/build-wasm	skifree.html skifree.js skifree.wasm	Runs in a browser (title screen, sounds load)
+psp	pspdev/pspdev	apk add -q bash >/dev/null 2>&1; bash scripts/build_psp.sh /src/build-psp	EBOOT.PBP	Runs in PPSSPP (title screen)

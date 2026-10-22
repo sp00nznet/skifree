@@ -1,0 +1,18 @@
+{
+  "title": "SkiFree: console builds",
+  "repo": "sp00nznet/skifree",
+  "accent": "#2a6fdb",
+  "note": {
+    "default": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles, Android and the browser at once, all in Docker (it must be installed and running). The first run downloads the toolchains, tens of GB, and takes an hour or more; the builds land in builds/, with builds/README.txt saying what each one is known to do.",
+    "darwin": "Builds SkiFree from your ski32.exe (free from its author at ski.ihoc.net; ski32sounds.exe adds the sounds) for the consoles, Android and the browser at once, all in Docker Desktop (it must be installed and running). The toolchains are x86 images: on Apple silicon they run emulated and take several hours. The builds land in builds/."
+  },
+  "game": {
+    "name": "SkiFree",
+    "files": ["ski32*.exe|ski32*.zip"]
+  },
+  "setup": {
+    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup-consoles.ps1", "-Yes", "-Game", "{game}"],
+    "default": ["bash", "setup-consoles.sh", "--yes", "--game-dir", "{game}"]
+  },
+  "play": "Console builds (recomp).*"
+}
