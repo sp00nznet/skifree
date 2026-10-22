@@ -1,0 +1,46 @@
+# Runs the real setup on all three systems, as the installer would, and starts
+# the game headless for a few seconds. ski32.exe comes from its author's site
+# for the test only; nothing from it is kept or published.
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      RECOMP_LAUNCHER: "1"
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir -p ../game && curl -fsSL -o ../game/ski32.exe https://ski.ihoc.net/ski32.exe
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
+      - if: runner.os != 'Windows'
+        run: bash -n setup.sh && bash setup.sh --yes --game-dir ../game
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\setup.ps1 -Yes -Game ..\game
+      - name: the game starts and keeps running
+        run: |
+          case "$RUNNER_OS" in
+            Windows) exe=build/Release/skifree.exe ;;
+            macOS)   exe=build-macos/skifree ;;
+            *)       exe=build-linux/skifree ;;
+          esac
+          "$exe" > run.log 2>&1 & pid=$!
+          sleep 5
+          kill -0 $pid || { cat run.log; exit 1; }
+          kill $pid; cat run.log

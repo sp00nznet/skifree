@@ -132,8 +132,17 @@ void menu_set_mod_check(int mod_id, int enabled) {
 }
 
 #else
-/* Stubs for non-Windows platforms */
-bool menu_init(void *sdl_window) { (void)sdl_window; return false; }
-menu_action_t menu_poll_action(void) { return MENU_NONE; }
-void menu_set_mod_check(int mod_id, int enabled) { (void)mod_id; (void)enabled; }
+/* No native menu bar: menu_gui.cpp draws one with ImGui and posts its picks here */
+static menu_action_t pending_action = MENU_NONE;
+static int mod_checks[2];
+
+bool menu_init(void *sdl_window) { (void)sdl_window; return true; }
+menu_action_t menu_poll_action(void) {
+    menu_action_t action = pending_action;
+    pending_action = MENU_NONE;
+    return action;
+}
+void menu_post_action(menu_action_t action) { pending_action = action; }
+void menu_set_mod_check(int mod_id, int enabled) { mod_checks[mod_id == IDM_MODS_TREE_HORDE] = enabled; }
+int menu_get_mod_check(int mod_id) { return mod_checks[mod_id == IDM_MODS_TREE_HORDE]; }
 #endif

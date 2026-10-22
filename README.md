@@ -43,67 +43,46 @@ That's the magic of SkiFree.
 - **Yeti Horde** — 20 yetis spawn in a ring around you and converge from all directions. Pure panic.
 - **Tree Horde** — 20 walking trees actively chase you. When they catch you, they eat you. The forest is alive and it's hungry.
 
-## Building
+## Download
 
-### Prerequisites
+**[Get the installer](https://github.com/sp00nznet/skifree/releases/latest)** for Windows, Linux or macOS.
 
-- **CMake** 3.16+
-- **SDL2**, **SDL2_image**, **SDL2_ttf**, **SDL2_mixer**
-- **cJSON** (via vcpkg or system package)
-- A C/C++ compiler (MSVC, GCC, Clang)
-- **Python 3** + `pefile` (for resource extraction)
-- A copy of `ski32.exe` ([free download](https://ski.ihoc.net/))
+1. Download `ski32.exe`, free from its author at [ski.ihoc.net](https://ski.ihoc.net/). For sound effects, get
+   Alice Averlong's [ski32sounds.exe](https://web.archive.org/web/20240324032244/http://foone.org/downloads/skifree/ski32sounds.zip)
+   instead (the zip is fine as it is).
+2. Open the installer, **Choose folder** (the one holding `ski32.exe`, say Downloads), then **Build**.
+3. **Play**. It can leave a desktop shortcut too.
 
-### Step 1: Get the original resources
+The installer builds the game on your machine from your copy of `ski32.exe`; nothing from the game is in it.
+It isn't signed: on Windows click **More info**, **Run anyway**; on a Mac open it once, then **Open Anyway**
+in System Settings, Privacy & Security.
 
-```bash
-pip install pefile
-python tools/extract_resources.py /path/to/ski32.exe
-```
+| | Needs | Installed for you |
+|---|---|---|
+| Windows 10/11 | nothing | Python, CMake, the Visual Studio Build Tools (winget), SDL2 |
+| macOS (Apple silicon or Intel) | [Homebrew](https://brew.sh), Xcode's command line tools | CMake, SDL2 (Homebrew) |
+| Linux | `build-essential cmake python3 pkg-config libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev` (or your distro's names) | nothing; setup names what's missing |
 
-On Windows, also copy `C:\Windows\Fonts\vgaoem.fon` into `resources/`.
+On Windows the menus are the native menu bar. On Linux and macOS, move the mouse to the top of the window and
+the same menus drop down.
 
-### Step 2: Get sound effects (optional)
+## Building by hand
 
-[Alice Averlong](https://foone.wordpress.com/2017/06/20/uncovering-the-sounds-of-skifree/) tracked down the original sound files from Chris Pirih and patched them back into the binary.
-
-```bash
-# Download from the Wayback Machine:
-# https://web.archive.org/web/20240324032244/http://foone.org/downloads/skifree/ski32sounds.zip
-python tools/extract_resources.py /path/to/ski32sounds/ski32.exe
-```
-
-Or drop your own WAVs into `sounds/`: `ouch.wav`, `whee.wav`, `woof.wav`, `oof.wav`, `dude.wav`, `myhair.wav`, `gobble.wav`, `piddle.wav`, `argh.wav`
-
-### Step 3: Install dependencies
-
-**Windows (vcpkg):**
-```bash
-vcpkg install sdl2 sdl2-image sdl2-ttf sdl2-mixer cjson
-```
-
-**macOS:**
-```bash
-brew install sdl2 sdl2_image sdl2_ttf sdl2_mixer cjson
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev libcjson-dev
-```
-
-### Step 4: Build
+The installer runs the same scripts: `Setup.cmd` on Windows, `./setup.sh` on Linux and macOS. Put `ski32.exe`
+(or `ski32sounds.exe`) in this folder or in Downloads, or pass its path:
 
 ```bash
-cmake -B build
-cmake --build build
+./setup.sh ~/Downloads/ski32sounds.exe       # Linux, macOS: builds build-linux/ or build-macos/
+Setup.cmd C:\Users\me\Downloads\ski32.exe    # Windows: builds build\Release\
 ```
 
-Windows with vcpkg:
-```bash
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=[vcpkg root]/scripts/buildsystems/vcpkg.cmake
-cmake --build build --config Release
-```
+They leave `SkiFree (recomp).sh` / `.command` / `.cmd` to play with. Or by hand: `python3 tools/extract_resources.py ski32.exe`
+(Python's standard library only), then `cmake -B build && cmake --build build` with SDL2, SDL2_ttf and SDL2_mixer
+installed (vcpkg on Windows works too: `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake`).
+cJSON is in `third_party/`.
+
+The status window uses Windows' `vgaoem.fon` when setup finds it; elsewhere it uses ProggyClean
+(Tristan Grimmer, MIT), which ships with this repo.
 
 ## Controls
 
@@ -128,7 +107,7 @@ All keyboard and gamepad bindings are remappable via Controls menu.
 
 | Menu | Items |
 |---|---|
-| **File** | Save, Save As, Load, Exit |
+| **File** | Save, Save As, Load, Exit (Linux, macOS: Save and Load use `skifree_save.json`) |
 | **Graphics** | Resolution picker (4:3 and 16:9 options) |
 | **Sound** | Sound Settings (enable + volume slider) |
 | **Controls** | Keyboard config, Gamepad config (with live rebinding) |

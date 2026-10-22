@@ -15,6 +15,7 @@
 extern "C" {
 #include "input_bind.h"
 #include "net.h"
+#include "win32_menu.h"
 }
 
 /* Cached renderer pointer for RenderDrawData */
@@ -167,6 +168,60 @@ void menu_gui_new_frame(void) {
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+
+#ifndef _WIN32
+    /* Off Windows there is no native menu bar: ImGui's drops down while the
+     * mouse is at the top edge or one of its menus is open. */
+    {
+        ImGuiIO &io = ImGui::GetIO();
+        bool at_top = io.MousePos.y >= 0 && io.MousePos.y < 24;
+        if ((at_top || ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+            && ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Save")) menu_post_action(MENU_FILE_SAVE);
+                if (ImGui::MenuItem("Load")) menu_post_action(MENU_FILE_LOAD);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Exit")) menu_post_action(MENU_FILE_EXIT);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Graphics")) {
+                if (ImGui::MenuItem("Resolution...")) menu_post_action(MENU_GFX_RESOLUTION);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Sound")) {
+                if (ImGui::MenuItem("Sound Settings...")) menu_post_action(MENU_SOUND_VOLUME);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Controls")) {
+                if (ImGui::MenuItem("Keyboard...")) menu_post_action(MENU_CTRL_KEYBOARD);
+                if (ImGui::MenuItem("Gamepad...")) menu_post_action(MENU_CTRL_GAMEPAD);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Multiplayer")) {
+                if (ImGui::MenuItem("Settings...")) menu_post_action(MENU_MP_SETTINGS);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Host...")) menu_post_action(MENU_MP_HOST);
+                if (ImGui::MenuItem("Join...")) menu_post_action(MENU_MP_JOIN);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Mods")) {
+                if (ImGui::MenuItem("Yeti Horde", NULL, menu_get_mod_check(IDM_MODS_YETI_HORDE) != 0)) menu_post_action(MENU_MODS_YETI_HORDE);
+                if (ImGui::MenuItem("Tree Horde", NULL, menu_get_mod_check(IDM_MODS_TREE_HORDE) != 0)) menu_post_action(MENU_MODS_TREE_HORDE);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Debug")) {
+                if (ImGui::MenuItem("Overlay", "F9")) menu_post_action(MENU_DEBUG_OVERLAY);
+                if (ImGui::MenuItem("Asset Viewer")) menu_post_action(MENU_DEBUG_ASSETS);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("About")) {
+                if (ImGui::MenuItem("About SkiFree...")) menu_post_action(MENU_ABOUT);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+    }
+#endif
 
     /* Draw active dialogs */
 

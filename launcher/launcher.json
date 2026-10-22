@@ -1,0 +1,19 @@
+{
+  "title": "SkiFree",
+  "repo": "sp00nznet/skifree",
+  "accent": "#2a6fdb",
+  "note": {
+    "windows": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The first build takes a few minutes. Python, CMake and the Visual Studio Build Tools (about 3 GB) are installed if they are missing; Windows asks for permission once.",
+    "darwin": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs Homebrew and Xcode's command line tools, and installs SDL2 with Homebrew.",
+    "default": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs a C/C++ compiler, CMake, Python 3 and SDL2, SDL2_ttf and SDL2_mixer from your package manager; if any are missing it says which, with the command to install them."
+  },
+  "game": {
+    "name": "SkiFree",
+    "files": ["ski32*.exe|ski32*.zip"]
+  },
+  "setup": {
+    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup.ps1", "-Yes", "-Game", "{game}"],
+    "default": ["bash", "setup.sh", "--yes", "--game-dir", "{game}"]
+  },
+  "play": "SkiFree (recomp).*"
+}

@@ -6,7 +6,7 @@
 #include "saveload.h"
 #include "skifree.h"
 #include "consts.h"
-#include <cjson/cJSON.h>
+#include "cJSON.h"
 #include <stdio.h>
 #include <string.h>
 

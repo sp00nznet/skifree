@@ -24,7 +24,6 @@
 #include "saveload.h"
 #include "input_bind.h"
 #include "menu_gui.h"
-#include <SDL_image.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -304,7 +303,7 @@ int main(int argc, char* argv[]) {
                         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                         640, 480, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
                     if (assetViewerWindow) {
-                        assetViewerRenderer = SDL_CreateRenderer(assetViewerWindow, -1, SDL_RENDERER_ACCELERATED);
+                        assetViewerRenderer = SDL_CreateRenderer(assetViewerWindow, -1, 0);
                     }
                 } else if (!assetViewerEnabled && assetViewerWindow) {
                     if (assetViewerRenderer) SDL_DestroyRenderer(assetViewerRenderer);
@@ -783,14 +782,16 @@ int initWindows() {
         nWidth, nHeight,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    renderer = SDL_CreateRenderer(hSkiMainWnd, -1, SDL_RENDERER_ACCELERATED);
-
-    SDL_RendererInfo info;
-    SDL_GetRendererInfo(renderer, &info);
-    printf("Renderer name: %s\n", info.name);
-    printf("Texture formats:\n");
-    for (int i = 0; i < info.num_texture_formats; i++) {
-        printf("%s\n", SDL_GetPixelFormatName(info.texture_formats[i]));
+    /* 0: a GPU renderer if there is one, else SDL's software one */
+    renderer = SDL_CreateRenderer(hSkiMainWnd, -1, 0);
+    if (!renderer) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "SkiFree", SDL_GetError(), NULL);
+        return 0;
+    }
+    {
+        SDL_RendererInfo info;
+        SDL_GetRendererInfo(renderer, &info);
+        printf("Renderer: %s\n", info.name);
     }
 
     SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xFF);
@@ -1398,7 +1399,9 @@ BOOL calculateStatusWindowDimensions(HWND hWnd) {
     //     statusWindowFont = SelectObject(statusWindowDC, statusWindowFont);
     // }
     {
+        /* vgaoem.fon is Windows' own; elsewhere ProggyClean (MIT, from Dear ImGui) stands in */
         Resource *font_res = resource_load("resources/vgaoem.fon");
+        if (!font_res) font_res = resource_load("resources/ProggyClean.ttf");
         SDL_RWops *font_rw;
         if (!font_res) {
             printf("[resources] ERROR: Could not load font\n");
@@ -1690,7 +1693,7 @@ HBITMAP loadBitmapResource(uint32_t resourceId) {
     }
 
     rw = SDL_RWFromConstMem(res->content, res->len);
-    bitmap = IMG_Load_RW(rw, 1);
+    bitmap = SDL_LoadBMP_RW(rw, 1);
     resource_free(res);
     return bitmap;
 }

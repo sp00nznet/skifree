@@ -1,5 +1,7 @@
 # Build
 build/
+build-*/
+deps/
 cmake-build-*/
 out/
 
@@ -20,6 +22,7 @@ embedded_resources.h
 resources/*.bmp
 resources/*.fon
 resources/*.ttf
+!resources/ProggyClean.ttf
 resources/*.ICO
 resources/*.ico
 
@@ -39,3 +42,7 @@ desktop.ini
 
 # Upstream reference (not part of the project)
 upstream_src/
+
+# Setup output
+setup.log
+SkiFree (recomp).*

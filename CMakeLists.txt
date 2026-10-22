@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 project(skifree C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
@@ -7,13 +7,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 # --- Find SDL2 and friends ---
 find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 find_package(SDL2_mixer REQUIRED)
-find_package(cJSON CONFIG REQUIRED)
 
 # --- Embed resources at build time ---
-file(GLOB resource_files "resources/*.bmp" "resources/*.fon" "resources/*.ttf" "resources/*.ICO")
+file(GLOB resource_files "resources/*")
 
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
@@ -27,39 +25,7 @@ add_custom_command(
 )
 
 # --- Main executable ---
-if(APPLE)
-    # Generate icns from ICO if imagemagick is available
-    find_program(CONVERT_CMD convert)
-    if(CONVERT_CMD)
-        add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ICONSKI.png
-            COMMAND ${CONVERT_CMD}
-            ARGS -flatten ${CMAKE_SOURCE_DIR}/resources/ICONSKI.ICO ${CMAKE_CURRENT_BINARY_DIR}/ICONSKI.PNG
-            DEPENDS ${CMAKE_SOURCE_DIR}/resources/ICONSKI.ICO
-        )
-        add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ski32.icns
-            COMMAND ${CMAKE_SOURCE_DIR}/tools/make-osx-icns.sh
-            DEPENDS ICONSKI.png
-        )
-        set(SKIFREE_ICON ${CMAKE_CURRENT_BINARY_DIR}/ski32.icns)
-        set_source_files_properties(${SKIFREE_ICON} PROPERTIES
-            MACOSX_PACKAGE_LOCATION "Resources")
-    endif()
-
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SKIFREE_ICON})
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        BUNDLE True
-        MACOSX_BUNDLE_GUI_IDENTIFIER com.skifree.recomp
-        MACOSX_BUNDLE_BUNDLE_NAME "SkiFree"
-        MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
-    )
-elseif(WIN32)
-    add_executable(${PROJECT_NAME} WIN32)
-else()
-    add_executable(${PROJECT_NAME})
-endif()
+add_executable(${PROJECT_NAME} WIN32)
 
 target_sources(${PROJECT_NAME} PRIVATE
     src/skifree.c
@@ -75,6 +41,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/saveload.c
     src/input_bind.c
     src/menu_gui.cpp
+    third_party/cjson/cJSON.c
     third_party/imgui/imgui.cpp
     third_party/imgui/imgui_draw.cpp
     third_party/imgui/imgui_tables.cpp
@@ -87,6 +54,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE
     src
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party/cjson
     ${CMAKE_SOURCE_DIR}/third_party/imgui
     ${CMAKE_SOURCE_DIR}/third_party/imgui/backends
 )
@@ -108,7 +76,6 @@ endif()
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} ws2_32 comdlg32)
 endif()
-target_link_libraries(${PROJECT_NAME} cjson)
 
 # --- Link libraries ---
 # Handle different SDL2 CMake configurations
@@ -117,13 +84,6 @@ if(TARGET SDL2::SDL2)
 elseif(SDL2_LIBRARIES)
     target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
-endif()
-
-if(TARGET SDL2_image::SDL2_image)
-    target_link_libraries(${PROJECT_NAME} SDL2_image::SDL2_image)
-elseif(SDL2IMAGE_LIBRARY)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2IMAGE_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${SDL2IMAGE_LIBRARY})
 endif()
 
 if(TARGET SDL2_ttf::SDL2_ttf)
@@ -138,4 +98,11 @@ if(TARGET SDL2_mixer::SDL2_mixer)
 elseif(SDL2MIXER_LIBRARY)
     target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2MIXER_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${SDL2MIXER_LIBRARY})
+endif()
+
+# Windows: the SDL DLLs beside skifree.exe, so it runs from the build folder
+if(WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND_EXPAND_LISTS)
 endif()

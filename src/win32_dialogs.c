@@ -121,11 +121,25 @@ void dialog_about(void *sdl_window) {
 }
 
 #else
-/* Non-Windows stubs */
-bool dialog_save_file(char *out_path, int max_len) { (void)out_path; (void)max_len; return false; }
-bool dialog_open_file(char *out_path, int max_len) { (void)out_path; (void)max_len; return false; }
+#include <SDL.h>
+#include <string.h>
+
+/* No file picker off Windows: Save and Load use the one save file */
+bool dialog_save_file(char *out_path, int max_len) { SDL_strlcpy(out_path, "skifree_save.json", max_len); return true; }
+bool dialog_open_file(char *out_path, int max_len) { return dialog_save_file(out_path, max_len); }
 int dialog_volume(int current_volume) { (void)current_volume; return -1; }
 bool dialog_mp_host(HostSettings *out) { (void)out; return false; }
 bool dialog_mp_join(char *out_ip, int ip_len, int *out_port) { (void)out_ip; (void)ip_len; (void)out_port; return false; }
-void dialog_about(void *sdl_window) { (void)sdl_window; }
+void dialog_about(void *sdl_window) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "About SkiFree",
+        "SkiFree: Reborn\n\n"
+        "A static recompilation of the 1991 classic by Chris Pirih.\n\n"
+        "Credits:\n"
+        "  Chris Pirih - Original game (1991)\n"
+        "  Eric Fry (yuv422) - Decompilation\n"
+        "  jeff-1amstudios - SDL2 port\n"
+        "  Alice Averlong - Sound research\n\n"
+        "https://github.com/sp00nznet/skifree",
+        (SDL_Window *)sdl_window);
+}
 #endif

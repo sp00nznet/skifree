@@ -44,4 +44,8 @@ bool menu_init(void *sdl_window);
 menu_action_t menu_poll_action(void);
 void menu_set_mod_check(int mod_id, int enabled);
 
+/* Off Windows the menu bar is ImGui's (menu_gui.cpp): it posts here */
+void menu_post_action(menu_action_t action);
+int menu_get_mod_check(int mod_id);
+
 #endif
