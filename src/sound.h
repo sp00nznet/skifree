@@ -1,15 +1,16 @@
 /*
  * SkiFree Sound System
- * SDL_mixer-based sound effects with multi-channel support.
+ * Multi-channel sound effects on SDL's own audio (sound.c).
  */
 
 #ifndef SKIFREE_SOUND_H
 #define SKIFREE_SOUND_H
 
-#include <SDL_mixer.h>
+#include <SDL.h>
 
 typedef struct {
-    Mix_Chunk *chunk;
+    Sint16 *samples;   /* converted to the device format: S16 stereo 44.1 kHz */
+    int len;           /* in Sint16s */
     const char *name;  /* resource name for mod loading */
 } SoundEffect;
 

@@ -48,11 +48,8 @@ endfunction()
 
 ####################################################################################################
 
-if(NOT DEFINED RESOURCES_GLOB)
-    message(FATAL_ERROR "RESOURCES_GLOB is not set")
-endif()
-
-file(GLOB resource_files RELATIVE ${SOURCE_DIR} "${SOURCE_DIR}/${RESOURCES_GLOB}")
+# the sprites and fonts, and the sound effects when setup found them
+file(GLOB resource_files RELATIVE ${SOURCE_DIR} "${SOURCE_DIR}/resources/*" "${SOURCE_DIR}/sounds/*.wav")
 
 write_header("embedded_resources.h")
 

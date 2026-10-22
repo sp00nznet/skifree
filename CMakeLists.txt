@@ -1,33 +1,29 @@
 cmake_minimum_required(VERSION 3.21)
 project(skifree C CXX)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 
-# --- Find SDL2 and friends ---
+# Lite: the build for consoles, Android and the browser. No ImGui menus, no
+# network game and no SDL_ttf (src/lite/), so it needs SDL2 alone.
+option(SKIFREE_LITE "Build without the menus, the network game and SDL_ttf" OFF)
+
 find_package(SDL2 REQUIRED)
-find_package(SDL2_ttf REQUIRED)
-find_package(SDL2_mixer REQUIRED)
+if(NOT SKIFREE_LITE)
+    find_package(SDL2_ttf REQUIRED)
+endif()
 
-# --- Embed resources at build time ---
-file(GLOB resource_files "resources/*")
-
+# --- The sprites and sounds from ski32.exe, embedded at build time ---
+file(GLOB resource_files "resources/*" "sounds/*.wav")
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
-    COMMAND "${CMAKE_COMMAND}"
-        "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}"
-        "-DRESOURCES_GLOB=resources/*"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedResources.cmake"
+    COMMAND "${CMAKE_COMMAND}" "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedResources.cmake"
     DEPENDS ${resource_files}
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Embedding game resources..."
 )
 
-# --- Main executable ---
-add_executable(${PROJECT_NAME} WIN32)
-
-target_sources(${PROJECT_NAME} PRIVATE
+add_executable(${PROJECT_NAME} WIN32
     src/skifree.c
     src/resources.c
     src/config.c
@@ -35,73 +31,45 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/ai.c
     src/physics.c
     src/replay.c
-    src/net.c
     src/win32_menu.c
     src/win32_dialogs.c
     src/saveload.c
     src/input_bind.c
-    src/menu_gui.cpp
     third_party/cjson/cJSON.c
-    third_party/imgui/imgui.cpp
-    third_party/imgui/imgui_draw.cpp
-    third_party/imgui/imgui_tables.cpp
-    third_party/imgui/imgui_widgets.cpp
-    third_party/imgui/backends/imgui_impl_sdl2.cpp
-    third_party/imgui/backends/imgui_impl_sdlrenderer2.cpp
     "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h"
 )
+target_include_directories(${PROJECT_NAME} PRIVATE src ${CMAKE_CURRENT_BINARY_DIR} third_party/cjson)
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-    src
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/third_party/cjson
-    ${CMAKE_SOURCE_DIR}/third_party/imgui
-    ${CMAKE_SOURCE_DIR}/third_party/imgui/backends
-)
+if(SKIFREE_LITE)
+    target_sources(${PROJECT_NAME} PRIVATE src/lite/lite_stubs.c)
+    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE src/lite)
+else()
+    target_sources(${PROJECT_NAME} PRIVATE
+        src/net.c
+        src/menu_gui.cpp
+        third_party/imgui/imgui.cpp
+        third_party/imgui/imgui_draw.cpp
+        third_party/imgui/imgui_tables.cpp
+        third_party/imgui/imgui_widgets.cpp
+        third_party/imgui/backends/imgui_impl_sdl2.cpp
+        third_party/imgui/backends/imgui_impl_sdlrenderer2.cpp
+    )
+    target_include_directories(${PROJECT_NAME} PRIVATE third_party/imgui third_party/imgui/backends)
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2_ttf::SDL2_ttf)
+endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2)
 
-# --- Compiler settings ---
 if(MSVC)
     target_link_options(${PROJECT_NAME} PRIVATE /subsystem:windows /ENTRY:mainCRTStartup)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        -D_CRT_SECURE_NO_WARNINGS
-        -DSDL_MAIN_HANDLED
-        -DWIN32_LEAN_AND_MEAN
-    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS SDL_MAIN_HANDLED WIN32_LEAN_AND_MEAN)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /bigobj)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-unused-variable)
 endif()
 
-# --- Platform-specific ---
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} ws2_32 comdlg32)
-endif()
-
-# --- Link libraries ---
-# Handle different SDL2 CMake configurations
-if(TARGET SDL2::SDL2)
-    target_link_libraries(${PROJECT_NAME} SDL2::SDL2)
-elseif(SDL2_LIBRARIES)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
-endif()
-
-if(TARGET SDL2_ttf::SDL2_ttf)
-    target_link_libraries(${PROJECT_NAME} SDL2_ttf::SDL2_ttf)
-elseif(SDL2TTF_LIBRARY)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2TTF_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${SDL2TTF_LIBRARY})
-endif()
-
-if(TARGET SDL2_mixer::SDL2_mixer)
-    target_link_libraries(${PROJECT_NAME} SDL2_mixer::SDL2_mixer)
-elseif(SDL2MIXER_LIBRARY)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2MIXER_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${SDL2MIXER_LIBRARY})
-endif()
-
-# Windows: the SDL DLLs beside skifree.exe, so it runs from the build folder
-if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 comdlg32)
+    # the SDL DLLs beside skifree.exe, so it runs from the build folder
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> $<TARGET_FILE_DIR:${PROJECT_NAME}>
         COMMAND_EXPAND_LISTS)
