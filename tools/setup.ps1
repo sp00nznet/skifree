@@ -83,12 +83,11 @@ if (-not (Find-VS)) {
   if (-not (Find-VS)) { Fail "the Visual Studio Build Tools did not install. Install them with 'Desktop development with C++', then run Setup.cmd again." }
 }
 Say "  Visual Studio: $(Find-VS)"
-# SDL2 and its two helpers, the official prebuilt Visual C++ packages
+# SDL2 and SDL2_ttf, the official prebuilt Visual C++ packages
 $Deps = Join-Path $Root 'deps'
 $Sdl = @(
   @('SDL2-2.32.10', 'https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-devel-2.32.10-VC.zip'),
-  @('SDL2_ttf-2.24.0', 'https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-VC.zip'),
-  @('SDL2_mixer-2.8.1', 'https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-VC.zip'))
+  @('SDL2_ttf-2.24.0', 'https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-VC.zip'))
 New-Item -ItemType Directory -Force $Deps | Out-Null
 foreach ($d in $Sdl) {
   if (Test-Path (Join-Path $Deps $d[0])) { continue }

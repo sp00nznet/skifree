@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 - 2026-10-22
+
+SkiFree on 13 more systems, and the sound effects play.
+
+### Added
+- **Consoles, Android and the browser**, from an optional second installer,
+  `SkiFree-Consoles-Installer` (or `Setup Consoles.cmd` / `setup-consoles.sh`). Built in Docker
+  from your `ski32.exe`: PSP, PS Vita, PS2, PS3, PS4, Wii, GameCube, 3DS, original Xbox,
+  Xbox 360, Dreamcast, Android and WebAssembly. See [docs/consoles.md](docs/consoles.md).
+- The lite build (`SKIFREE_LITE`) these use: SDL2 alone, with no menus, no network game and an 8x8 font.
+- `src/sdl2lite/`: a small software SDL2 for the PS3, Dreamcast and Xbox 360, whose toolchains have none.
+- A controller's D-pad acts as the arrow keys, and a pad plugged in after start is picked up.
+
+### Fixed
+- **Sound effects never played**: the sounds were never embedded, and were only read from a mod
+  folder. They're embedded now, and mixed on SDL's own audio, so SDL2_mixer is no longer needed.
+- The left stick steered diagonally: it fed one axis into both X and Y.
+- The status box locked its texture twice, and a sprite atlas could exceed a GPU's texture size.
+- Sprite positions were read in a way that breaks on big-endian machines (Wii, GameCube, PS3, Xbox 360).
+
 ## 0.1.0 - 2026-10-22
 
 The first release, and the first with an installer.

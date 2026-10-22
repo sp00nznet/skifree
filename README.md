@@ -29,7 +29,7 @@ That's the magic of SkiFree.
 - **Full menu bar** — File, Graphics, Sound, Controls, Multiplayer, Mods, Debug, About
 - **Save/Load** — Save game state to JSON, load it back (File > Save / Load)
 - **Resolution picker** — Original 4:3 (640x480 to 1600x1200) and Widescreen 16:9 (720p to 4K)
-- **Sound effects** — All 9 original sound slots via SDL_mixer (multi-channel mixing)
+- **Sound effects** — All 9 original sound slots, mixed up to 8 at a time
 - **Gamepad support** — Xbox controller with left stick steering, remappable buttons
 - **Rebindable controls** — Keyboard and gamepad bindings configurable via ImGui dialogs
 - **Replay system** — F5 to record, F6 to play back (binary format, tick-accurate)
@@ -61,10 +61,25 @@ in System Settings, Privacy & Security.
 |---|---|---|
 | Windows 10/11 | nothing | Python, CMake, the Visual Studio Build Tools (winget), SDL2 |
 | macOS (Apple silicon or Intel) | [Homebrew](https://brew.sh), Xcode's command line tools | CMake, SDL2 (Homebrew) |
-| Linux | `build-essential cmake python3 pkg-config libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev` (or your distro's names) | nothing; setup names what's missing |
+| Linux | `build-essential cmake python3 pkg-config libsdl2-dev libsdl2-ttf-dev` (or your distro's names) | nothing; setup names what's missing |
 
 On Windows the menus are the native menu bar. On Linux and macOS, move the mouse to the top of the window and
 the same menus drop down.
+
+## Consoles, Android and the browser
+
+**The yeti, everywhere.** A second, optional download, `SkiFree-Consoles-Installer`
+(same [releases page](https://github.com/sp00nznet/skifree/releases/latest)), builds SkiFree
+from your `ski32.exe` for **PSP, PS Vita, PS2, PS3, PS4, Wii, GameCube, 3DS, original Xbox,
+Xbox 360, Dreamcast, Android and the browser** in one go. It needs only
+[Docker](https://www.docker.com/products/docker-desktop/), running. The first run downloads
+the toolchains (tens of GB) and takes an hour or more. Every console but the PS4 and Xbox 360
+has been seen running to the title screen in its emulator; those two build but have nothing
+to run in. Which file goes where, the controls, and what's known to work:
+**[docs/consoles.md](docs/consoles.md)**.
+
+Without the installer: `Setup Consoles.cmd` on Windows or `./setup-consoles.sh --targets psp,wii`
+on Linux and macOS.
 
 ## Building by hand
 
@@ -77,7 +92,7 @@ Setup.cmd C:\Users\me\Downloads\ski32.exe    # Windows: builds build\Release\
 ```
 
 They leave `SkiFree (recomp).sh` / `.command` / `.cmd` to play with. Or by hand: `python3 tools/extract_resources.py ski32.exe`
-(Python's standard library only), then `cmake -B build && cmake --build build` with SDL2, SDL2_ttf and SDL2_mixer
+(Python's standard library only), then `cmake -B build && cmake --build build` with SDL2 and SDL2_ttf
 installed (vcpkg on Windows works too: `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake`).
 cJSON is in `third_party/`.
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Linux and macOS setup: the same steps as Setup.cmd (tools/setup.ps1).
 #
-#   1. check the tools (a C/C++ compiler, CMake, Python 3, SDL2, SDL2_ttf,
-#      SDL2_mixer); on a Mac it installs what's missing with Homebrew, on
+#   1. check the tools (a C/C++ compiler, CMake, Python 3, SDL2 and
+#      SDL2_ttf); on a Mac it installs what's missing with Homebrew, on
 #      Linux it says which packages to install
 #   2. pull the sprites (and sounds, from ski32sounds.exe) out of your ski32.exe
 #   3. build build-linux/skifree (or build-macos/skifree)
@@ -37,7 +37,7 @@ if [ $MAC = 1 ]; then
   xcode-select -p >/dev/null 2>&1 || { xcode-select --install 2>/dev/null; fail "Xcode's command line tools are needed: accept the install that just opened, then run this again."; }
   command -v brew >/dev/null || fail "Homebrew is needed: https://brew.sh"
   need=()
-  for f in cmake pkgconf sdl2 sdl2_ttf sdl2_mixer; do brew list --formula "$f" >/dev/null 2>&1 || need+=("$f"); done
+  for f in cmake pkgconf sdl2 sdl2_ttf; do brew list --formula "$f" >/dev/null 2>&1 || need+=("$f"); done
   if [ ${#need[@]} -gt 0 ]; then
     say "  Installing ${need[*]} with Homebrew"
     brew install "${need[@]}" || fail "brew install ${need[*]} failed."
@@ -46,13 +46,13 @@ else
   need=()
   for t in cc c++ cmake python3 pkg-config; do command -v "$t" >/dev/null || need+=("$t"); done
   if command -v pkg-config >/dev/null; then
-    for p in sdl2 SDL2_ttf SDL2_mixer; do pkg-config --exists $p || need+=("$p's development files"); done
+    for p in sdl2 SDL2_ttf; do pkg-config --exists $p || need+=("$p's development files"); done
   fi
   if [ ${#need[@]} -gt 0 ]; then
     say "  Missing: ${need[*]}. From your package manager, for example:"
-    say "    Debian, Ubuntu: sudo apt install build-essential cmake python3 pkg-config libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev"
-    say "    Fedora:         sudo dnf install gcc gcc-c++ cmake python3 pkgconf SDL2-devel SDL2_ttf-devel SDL2_mixer-devel"
-    say "    Arch:           sudo pacman -S base-devel cmake python pkgconf sdl2 sdl2_ttf sdl2_mixer"
+    say "    Debian, Ubuntu: sudo apt install build-essential cmake python3 pkg-config libsdl2-dev libsdl2-ttf-dev"
+    say "    Fedora:         sudo dnf install gcc gcc-c++ cmake python3 pkgconf SDL2-devel SDL2_ttf-devel"
+    say "    Arch:           sudo pacman -S base-devel cmake python pkgconf sdl2 sdl2_ttf"
     fail "install them, then run ./setup.sh again."
   fi
 fi
