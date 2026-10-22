@@ -813,6 +813,8 @@ int initWindows() {
 
     calculateStatusWindowDimensions(hSkiStatusWnd);
     statusWindowTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, statusWindowTotalTextWidth, statusWindowHeight);
+    /* drawn here and uploaded with SDL_UpdateTexture: a locked texture's old pixels are not kept on every renderer (Wii/GameCube) */
+    statusWindowSurface = SDL_CreateRGBSurfaceWithFormat(0, statusWindowTotalTextWidth, statusWindowHeight, 32, SDL_PIXELFORMAT_RGBA8888);
 
     if (loadBitmaps(hSkiMainWnd) == 0) {
         return 0;
@@ -1366,7 +1368,6 @@ void paintStatusWindow(HWND hWnd) {
     // hbr = (HBRUSH)GetStockObject(4);
     // FrameRect(paint.hdc, &statusBorderRect, hbr);
 
-    SDL_LockTextureToSurface(statusWindowTexture, NULL, &statusWindowSurface);
 
     SDL_FillRect(statusWindowSurface, NULL, SDL_MapRGB(statusWindowSurface->format, 0, 0, 0));
     SDL_Rect r = { 1, 1, statusWindowSurface->w - 2, statusWindowSurface->h - 2 };
@@ -1389,8 +1390,6 @@ void paintStatusWindow(HWND hWnd) {
     drawText(NULL, str, 2, &y, len);
     formatAndPrintStatusStrings(NULL);
     // EndPaint(hWnd, &paint);
-
-    SDL_UnlockTexture(statusWindowTexture);
 }
 
 BOOL calculateStatusWindowDimensions(HWND hWnd) {
@@ -3518,6 +3517,17 @@ void updateWindowSize(HWND hWnd) {
     int w, h;
 
     SDL_GetRendererOutputSize(renderer, &w, &h);
+#ifdef SKIFREE_LITE
+    /* A big screen (a phone, a PS4 at 1080p): whole pixels, 2x or more, so
+     * the sprites aren't specks. SDL maps touch and mouse to match. */
+    {
+        int k = h / 400 > 1 ? h / 400 : 1;
+        if (k > 1) {
+            w /= k; h /= k;
+            SDL_RenderSetLogicalSize(renderer, w, h);
+        }
+    }
+#endif
     windowClientRect.right = w;
     windowClientRect.bottom = h;
 
@@ -3597,7 +3607,6 @@ void formatAndPrintStatusStrings(HDC windowDC) {
         }
     }
 
-    SDL_LockTextureToSurface(statusWindowTexture, NULL, &statusWindowSurface);
     SDL_Rect rect;
     rect.x = x;
     rect.y = 1;
@@ -3619,7 +3628,7 @@ void formatAndPrintStatusStrings(HDC windowDC) {
     drawText(windowDC, strBuf, x, &y, len);
     statusWindowLastUpdateTime = currentTickCount;
 
-    SDL_UnlockTexture(statusWindowTexture);
+    SDL_UpdateTexture(statusWindowTexture, NULL, statusWindowSurface->pixels, statusWindowSurface->pitch);
 }
 
 PermObject* addPermObject(PermObjectList* objList, PermObject* permObject) {
@@ -4365,6 +4374,16 @@ BOOL createBitmapSheets(HDC param_1) {
         } else {
             sprite->sheet = smallTextureAtlas;
         }
+        if (!sprite->sheet) {
+            /* atlas too tall for the GPU (Wii/GameCube: 1024): a texture per sprite */
+            SDL_Surface *atlas = sprite->sheetDC;
+            SDL_Surface *one = SDL_CreateRGBSurfaceWithFormatFrom((Uint8 *)atlas->pixels + sprite->sheetYOffset * atlas->pitch,
+                sprite->width, sprite->height, 32, atlas->pitch, atlas->format->format);
+            SDL_SetColorKey(one, SDL_TRUE, SDL_MapRGB(one->format, 0xFF, 0xFF, 0xFF));
+            sprite->sheet = SDL_CreateTextureFromSurface(renderer, one);
+            sprite->sheetYOffset = 0;
+            SDL_FreeSurface(one);
+        }
     }
 
     // scratchBitmapWidth = ((uint16_t)maxWidth & 0xffc0) + 0x40;
@@ -4497,12 +4516,12 @@ void drawActor(HDC hdc, Actor* actor) {
     short spriteWidth;
     short spriteHeight;
 
-    uVar6 = *(uint16_t*)&(actor->rect).left;
+    uVar6 = (uint16_t)(actor->rect).left;
     actorRectLeft = (actor->rect).left;
 
-    y = *(short*)&(actor->rect).top;
-    newWidth = *(short*)&(actor->rect).right - uVar6;
-    newHeight = *(short*)&(actor->rect).bottom - y;
+    y = (short)(actor->rect).top;
+    newWidth = (short)(actor->rect).right - uVar6;
+    newHeight = (short)(actor->rect).bottom - y;
 
     local_c = 0;
     local_20 = actor;
@@ -4590,7 +4609,7 @@ void drawActor(HDC hdc, Actor* actor) {
             }
 
             local_14 = rect->left - actorRectLeft;
-            sVar10 = *(short*)&rect->top - y;
+            sVar10 = (short)rect->top - y;
             ski_assert(rect->right - rect->left == spriteWidth, 1203);
             ski_assert(rect->bottom - rect->top == spriteHeight, 1204);
             ski_assert(local_14 >= 0, 1205);

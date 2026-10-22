@@ -4,3 +4,8 @@
 # setup prints it beside each result, and the README's table says the same.
 wasm	emscripten/emsdk	bash scripts/build_wasm.sh /src/build-wasm	skifree.html skifree.js skifree.wasm	Runs in a browser (title screen, sounds load)
 psp	pspdev/pspdev	apk add -q bash >/dev/null 2>&1; bash scripts/build_psp.sh /src/build-psp	EBOOT.PBP	Runs in PPSSPP (title screen)
+android	skifree-android	bash scripts/build_android.sh /src/build-android	skifree.apk	Runs in the Android emulator (x86_64; arm64-v8a built too), touch steers
+3ds	devkitpro/devkitarm	bash scripts/build_3ds.sh /src/build-3ds	skifree.3dsx	Runs in Azahar (title screen, 60 fps)
+vita	vitasdk/vitasdk	bash scripts/build_vita.sh /src/build-vita	skifree.vpk	Runs in Vita3K (title screen, 61 fps)
+wii	devkitpro/devkitppc	bash scripts/build_wii.sh /src/build-wii	skifree.dol	Runs in Dolphin (title screen)
+gamecube	devkitpro/devkitppc	bash scripts/build_gamecube.sh /src/build-gamecube	skifree.dol	Runs in Dolphin (title screen)

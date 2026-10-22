@@ -52,3 +52,11 @@ build-psp/
 build-lite/
 builds/
 build-logs/
+# Android: SDL2 staged by scripts/build_android.sh, plus Gradle and CMake state
+android/app/jni/SDL/
+android/app/src/main/java/
+android/app/src/main/res/mipmap-*/
+android/local.properties
+android/.gradle/
+android/app/build/
+android/app/.cxx/
