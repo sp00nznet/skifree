@@ -3,17 +3,33 @@
   "repo": "sp00nznet/skifree",
   "accent": "#2a6fdb",
   "note": {
-    "windows": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The first build takes a few minutes. Python, CMake and the Visual Studio Build Tools (about 3 GB) are installed if they are missing; Windows asks for permission once.",
-    "darwin": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs Homebrew and Xcode's command line tools, and installs SDL2 with Homebrew.",
-    "default": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs a C/C++ compiler, CMake, Python 3 and SDL2 and SDL2_ttf from your package manager; if any are missing it says which, with the command to install them."
+    "windows": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The first build takes a few minutes. Python, CMake and the Visual Studio Build Tools (about 3 GB) are installed if they are missing; Windows asks for permission once. The other systems are built in Docker (it must be installed and running); only the toolchains for the ones you tick are downloaded, into builds/.",
+    "darwin": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs Homebrew and Xcode's command line tools, and installs SDL2 with Homebrew. The other systems are built in Docker (it must be installed and running); only the toolchains for the ones you tick are downloaded, into builds/.",
+    "default": "Needs ski32.exe, free from its author at ski.ihoc.net (ski32sounds.exe, Alice Averlong's, adds the sounds); choose the folder it is in. The build takes a minute or two. It needs a C/C++ compiler, CMake, Python 3 and SDL2 and SDL2_ttf from your package manager; if any are missing it says which, with the command to install them. The other systems are built in Docker (it must be installed and running); only the toolchains for the ones you tick are downloaded, into builds/."
   },
   "game": {
     "name": "SkiFree",
     "files": ["ski32*.exe|ski32*.zip"]
   },
   "setup": {
-    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup.ps1", "-Yes", "-Game", "{game}"],
-    "default": ["bash", "setup.sh", "--yes", "--game-dir", "{game}"]
+    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup.ps1", "-Yes", "-Game", "{game}", "-Targets", "{choices}"],
+    "default": ["bash", "setup.sh", "--yes", "--game-dir", "{game}", "--targets", "{choices}"]
   },
-  "play": "SkiFree (recomp).*"
+  "play": "* (recomp).*",
+  "choices": [
+    { "id": "pc", "label": "This computer", "note": "Play here: Windows, Linux or macOS" },
+    { "id": "psp", "label": "PSP", "note": "EBOOT.PBP · Docker, 0.8 GB" },
+    { "id": "vita", "label": "PS Vita", "note": ".vpk · Docker, 2.2 GB" },
+    { "id": "ps2", "label": "PlayStation 2", "note": ".elf · Docker, 1.1 GB" },
+    { "id": "ps3", "label": "PlayStation 3", "note": "EBOOT.BIN · Docker, 13 GB" },
+    { "id": "ps4", "label": "PlayStation 4", "note": ".pkg, jailbroken · Docker, 0.9 GB" },
+    { "id": "3ds", "label": "Nintendo 3DS", "note": ".3dsx · Docker, 2.1 GB" },
+    { "id": "wii", "label": "Wii", "note": ".dol · Docker, 2.6 GB" },
+    { "id": "gamecube", "label": "GameCube", "note": ".dol · Docker, shares the Wii toolchain" },
+    { "id": "xbox", "label": "Original Xbox", "note": ".xbe / .iso · Docker, 1.4 GB" },
+    { "id": "xenon", "label": "Xbox 360", "note": "XeLL .elf32, untested · Docker, 3.6 GB" },
+    { "id": "dreamcast", "label": "Dreamcast", "note": ".cdi / .elf · Docker, 4.6 GB" },
+    { "id": "android", "label": "Android", "note": ".apk · Docker, 5.6 GB" },
+    { "id": "wasm", "label": "Browser", "note": "WebAssembly · Docker, 3.5 GB" }
+  ]
 }

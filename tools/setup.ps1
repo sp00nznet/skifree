@@ -9,8 +9,11 @@
 # -Yes installs what is missing without asking; -Game (or -GameDir) is
 # ski32.exe, a zip of it, or the folder it is in. RECOMP_LAUNCHER=1 (the
 # recomp launcher) skips the "Press Enter". Everything goes to setup.log.
+# -Targets pc,psp,wii: pc is this computer (the default); the rest are
+# scripts\targets.tsv's, built by tools\setup-consoles.ps1 in Docker, which
+# downloads only their toolchains.
 # ski32.exe is free from its author: https://ski.ihoc.net/
-param([switch]$Yes, [Alias('GameDir')][string]$Game = "")
+param([switch]$Yes, [Alias('GameDir')][string]$Game = "", [string]$Targets = "pc")
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
@@ -27,6 +30,14 @@ function Fail($t) {
   Say "The details are in $Log. Fix that and run Setup.cmd again." 'Yellow'
   Pause-End; exit 1
 }
+$picked = @($Targets -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$others = @($picked | Where-Object { $_ -ne 'pc' })
+function Consoles {
+  & (Join-Path $PSScriptRoot 'setup-consoles.ps1') -Yes:$Yes -Game $Game -Targets ($others -join ',')
+  $code = if ($?) { 0 } else { 1 }   # its exit 1 on 'Setup stopped'; a stale docker code otherwise
+  Pause-End; exit $code
+}
+if ($others.Count -and $picked -notcontains 'pc') { Consoles }
 function Ask($q) { if ($Yes) { Say "$q yes"; return $true }; $a = Read-Host "$q [Y/n]"; return -not ($a -match '^[nN]') }
 function Refresh-Path { $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') }
 # Run a program with its output in the log. Windows PowerShell turns a native
@@ -142,4 +153,5 @@ Set-Content -Path $lnk -Encoding ASCII -Value @('@echo off', 'cd /d "%~dp0"', 's
 Say "  $lnk"
 Write-Host ""
 Say "Done. Double-click 'SkiFree (recomp).cmd' to play. F to go faster; the yeti is waiting." 'Green'
+if ($others.Count) { Write-Host ""; Consoles }
 Pause-End

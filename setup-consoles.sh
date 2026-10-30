@@ -7,7 +7,7 @@
 #   ./setup-consoles.sh [--yes] [--game-dir <folder with ski32.exe>] [--targets wii,psp]
 #
 # Each step prints "[n/N] ..." and a failure ends with "Setup stopped: ...",
-# which the recomp launcher shows (launcher-consoles/launcher.json). A console
+# which the recomp launcher shows (launcher/launcher.json, through setup.sh --targets). A console
 # that fails to build doesn't stop the rest; the summary says which, and its
 # log is in build-logs/. The builds land in builds/<console>/.
 # No "set -u": macOS bash 3.2 treats an empty array as unset under it.
