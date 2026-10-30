@@ -11,16 +11,19 @@
 #   ./setup.sh                        # looks here and in ~/Downloads for ski32*.exe / ski32*.zip
 #   ./setup.sh ~/Downloads/ski32.exe  # the file, or the folder it is in
 #   ./setup.sh --yes --game-dir DIR   # as the recomp launcher runs it
+#   ./setup.sh --targets pc,psp,wii   # pc is this computer (the default); the rest are
+#                                     # scripts/targets.tsv's, built by setup-consoles.sh in Docker
 #
 # ski32.exe is free from its author: https://ski.ihoc.net/
 set -e
 cd "$(dirname "$0")"
 ROOT=$PWD
-GAME_ARG=
+GAME_ARG=; YES=; TARGETS=pc
 while [ $# -gt 0 ]; do
   case $1 in
-    --yes) ;;                                  # nothing here asks
+    --yes) YES=--yes ;;                        # nothing here asks; passed on to setup-consoles.sh
     --game-dir) GAME_ARG=$2; shift ;;
+    --targets) TARGETS=${2:-pc}; shift ;;
     *) GAME_ARG=$1 ;;
   esac
   shift
@@ -30,6 +33,13 @@ say()  { printf '%s\n' "$*"; }
 step() { printf '\n\033[36m%s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31mSetup stopped: %s\033[0m\n' "$*" >&2; exit 1; }
 MAC=0; [ "$(uname)" = Darwin ] && MAC=1
+# Every other target is setup-consoles.sh's, which downloads only their toolchains.
+OTHERS=$(echo ",$TARGETS," | sed 's/,pc,/,/g; s/^,*//; s/,*$//')
+consoles() {
+  args=(--targets "$OTHERS"); [ -n "$YES" ] && args+=("$YES"); [ -n "$GAME_ARG" ] && args+=(--game-dir "$GAME_ARG")
+  exec bash "$ROOT/setup-consoles.sh" "${args[@]}"
+}
+case ",$TARGETS," in *,pc,*) ;; *) [ -z "$OTHERS" ] || consoles ;; esac
 
 # ---- 1. tools -------------------------------------------------------------------
 step "[1/4] Checking the tools"
@@ -103,3 +113,4 @@ printf '#!/bin/sh\ncd "$(dirname "$0")" && exec %s/skifree "$@"\n' "$B" > "$L"
 chmod +x "$L"
 step "[4/4] Ready: ./$L"
 say "Move the mouse to the top of the window for the menus. F to go faster; the yeti is waiting."
+[ -z "$OTHERS" ] || { echo; consoles; }

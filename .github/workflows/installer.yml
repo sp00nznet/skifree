@@ -20,20 +20,10 @@ jobs:
       launcher-ref: v0.4.0
       name: SkiFree-Recomp-Installer
 
-  # The optional second download: the same installer, building every console
-  # (launcher-consoles/launcher.json, setup-consoles.sh) in Docker.
-  consoles:
-    needs: installer   # one release job at a time: the first creates the release
-    uses: sp00nznet/recomp-launcher/.github/workflows/installer.yml@v0.4.0
-    with:
-      launcher-ref: v0.4.0
-      manifest: launcher-consoles
-      name: SkiFree-Consoles-Installer
-
-  # Each installer job writes SHA256SUMS.txt for its own files; one for all of them.
+  # The installer job writes SHA256SUMS.txt for its own files; one for all of the release's.
   sums:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [installer, consoles]
+    needs: installer
     runs-on: ubuntu-24.04
     steps:
       - env:
